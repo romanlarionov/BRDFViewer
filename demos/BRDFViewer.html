@@ -11,9 +11,7 @@
 	<body>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
-	<script src="../lib/OBJLoader.js" type="text/javascript"></script>
-	<script src="../lib/MTLLoader.js" type="text/javascript"></script>
-	<script src="../lib/OrbitControls.js" type="text/javascript"></script>
+    <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
 	<script src="../lib/KeyboardState.js" type="text/javascript"></script>
 	<script src="../src/js/model.js" type="text/javascript"></script>
 	<script src="../src/js/shader.js" type="text/javascript"></script>
@@ -33,6 +31,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         window.addEventListener("resize", onWindowResize, false);
         document.body.appendChild(renderer.domElement);
+        scene.background = new THREE.Color( 0x3C5C67);
 
         // User Input
         var keyboard = new THREEx.KeyboardState();
@@ -40,26 +39,6 @@
 		controls.enableDamping = true;
 		controls.dampingFactor = 0.25;
 		controls.enableZoom = false;
-
-        // Environment Map
-        var cubeMapLoader = new THREE.CubeTextureLoader();
-        cubeMapLoader.setPath("../assets/cube_maps/woods/");
-        var cubeMap = cubeMapLoader.load(['posx.jpg', 'negx.jpg',
-                      'posy.jpg', 'negy.jpg',
-                      'posz.jpg', 'negz.jpg']);
-
-        var skyMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            envMap: cubeMap,
-            side: THREE.FrontSide
-        });
-
-        var skyGeometry = new THREE.BoxGeometry(2000, 2000, 2000);
-        var skyMesh = new THREE.Mesh(skyGeometry, skyMaterial);
-        scene.add(skyMesh);
-
-        cubeMap.format = THREE.RGBFormat;
-        scene.background = cubeMap;
 
         var metalTypes = {
             Gold: new THREE.Vector3(1.00, 0.71, 0.29),
@@ -70,35 +49,30 @@
         }
 
         // Scene objects
-        var mirrorShader = new Shader("smooth_mirror", {
-            envMap: { type: 't', value: cubeMap },
-            camera: { type: 'v3', value: camera.position },
-            normalFresnel: { type: 'v3', value: metalTypes.Gold }
+        var sphereFunc = function(u, v) {
+            var phi = u * 2 * Math.PI;
+            var theta = v * Math.PI;
+
+            var vert = new THREE.Vector3();
+            vert.x = Math.sin(phi) * Math.cos(theta);
+            vert.y = Math.sin(phi) * Math.sin(theta);
+            vert.z = Math.cos(phi);
+            return vert;
+        };
+
+        var vertSubdivisions = 100;
+        var horiSubdivisions = 100;
+        var sphereGeometry = new THREE.ParametricGeometry(sphereFunc, horiSubdivisions, vertSubdivisions);
+        var basicMaterial = new Shader("basic", {
+            V : { type: 'v3', value: camera.position },
+            L : {type: 'v3', value: new THREE.Vector3(5.0, 20.0, 20.0)},
+            I : {type: 'v3', value: new THREE.Vector3(255.0, 255.0, 255.0)},
+            C : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)}
         });
 
-        /*var normalMapMirrorShader = new Shader("smooth_mirror_map", {
-            envMap: { type: 't', value: cubeMap },
-            camera: { type: 'v3', value: camera.position }
-        });*/
+        var sphereMesh = new THREE.Mesh(sphereGeometry, basicMaterial.material);
+        scene.add(sphereMesh);
 
-        var spaceman = new Model();
-        spaceman.loadJSON("../assets/models/ACES/", "spaceman", mirrorShader.material);
-        
-        var oldMan = new Model();
-        oldMan.loadOBJ("../assets/models/old_man/", "muro", null, function(obj) {
-            // todo: for some reason, copying the passed in shader does not work.
-            // Need to find a way to avoid new shader creation for every submesh.
-            var s = new Shader("smooth_mirror_map", {
-                envMap: { type: 't', value: cubeMap },
-                camera: { type: 'v3', value: camera.position },
-                bumpMap: {type: 't', value: obj.material["bumpMap"]},
-                normalFresnel: { type: 'v3', value: metalTypes.Silver }
-            });
-
-            return s.material;
-        });
-
-        // Renderable square surface
         var square = new THREE.Geometry();
         square.vertices.push(new THREE.Vector3(0, 0, 0));
         square.vertices.push(new THREE.Vector3(0, 1, 0));
@@ -109,45 +83,16 @@
         square.faces.push(new THREE.Face3(0, 1, 2));
         square.faces.push(new THREE.Face3(3, 4, 5));
         square.computeVertexNormals();
-
-        var squareMesh = new THREE.Mesh(square, mirrorShader.material);
-        squareMesh.scale.set(15, 15, 0);
-        camera.add(squareMesh);
+        var squareMesh = new THREE.Mesh(square, basicMaterial.material);
         squareMesh.position.set(-5, -5, -10);
-        squareMesh.rotation.y += Math.PI;
-        scene.add(squareMesh);
+        //scene.add(squareMesh);
 
-        // params: function, num horizontal segments, num vertical segments
-        var sphereFunc = function(u, v) {
-            var vert = new THREE.Vector3();
-            vert.x = v;
-            vert.y = Math.log(Math.tan((x + Math.PI/2 )/ 2));
-            vert.z = 0;
-            return vert
-        };
-
-        var sphere = new THREE.ParametricGeometry(sphereFunc, 100, 100);
-
+        var gridHelper = new THREE.GridHelper(25, 50, 0x60F4E1, 0xE7EDEC);
+        scene.add(gridHelper);
 
         function updateScene()
         {
-            delta = clock.getDelta();
-
-            if (spaceman.meshIsLoaded) {
-                spaceman.loadedMesh.position.y = -7;
-                spaceman.loadedMesh.position.z = 7;
-                spaceman.loadedMesh.rotation.y = Math.PI;
-                spaceman.loadedMesh.scale.set(5, 5, 5);
-                spaceman.updateUniforms({type: 'v3', value: camera.position});
-            }
-
-            if (oldMan.meshIsLoaded) {
-                oldMan.loadedMesh.position.set(0, -7, -7);
-                oldMan.loadedMesh.scale.set(0.05, 0.05, 0.05);
-                oldMan.updateUniforms({type: 'v3', value: camera.position});
-            }
-
-            squareMesh.material.uniforms["camera"] = {type: 'v3', value: camera.position};
+            sphereMesh.material.uniforms["V"] = {type: 'v3', value: camera.position};
         }
 
         // Render

@@ -5,6 +5,7 @@ var Shader = function(file, uniforms) {
     if (!uniforms) uniforms = {};
     this.material = new THREE.RawShaderMaterial({
         uniforms,
+        side: THREE.DoubleSide,
         vertexShader: this._loadShaderFile(this.file + ".vert"),
         fragmentShader: this._loadShaderFile(this.file + ".frag")
     });
