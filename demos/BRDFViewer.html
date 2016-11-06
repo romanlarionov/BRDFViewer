@@ -13,6 +13,7 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
     <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
 	<script src="../lib/KeyboardState.js" type="text/javascript"></script>
+    <script src='../lib/DAT.GUI.min.js' type='text/javascript'></script>
 	<script src="../src/js/model.js" type="text/javascript"></script>
 	<script src="../src/js/shader.js" type="text/javascript"></script>
     <script>
@@ -40,14 +41,6 @@
 		controls.dampingFactor = 0.25;
 		controls.enableZoom = false;
 
-        var metalTypes = {
-            Gold: new THREE.Vector3(1.00, 0.71, 0.29),
-            Silver: new THREE.Vector3(0.95, 0.93, 0.88),
-            Copper: new THREE.Vector3(0.95, 0.64, 0.54),
-            Iron: new THREE.Vector3(0.56, 0.57, 0.58),
-            Aluminum: new THREE.Vector3(0.91, 0.92, 0.92)
-        }
-
         // Scene objects
         var sphereFunc = function(u, v) {
             var phi = u * 2 * Math.PI;
@@ -67,10 +60,16 @@
             V : { type: 'v3', value: camera.position },
             L : {type: 'v3', value: new THREE.Vector3(5.0, 20.0, 20.0)},
             I : {type: 'v3', value: new THREE.Vector3(255.0, 255.0, 255.0)},
-            C : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)}
+            C : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)},
+            roughness : {type: 'f', value: 0.3 },
+            phi : {type: 'f', value: 0.0 },
+            theta : {type: 'f', value: Math.PI / 4},
+            F0 : {type: 'f', value: 0.1 },
+            light : {type: 'v3', value: new THREE.Vector3(-5.0, 3.0, 0.0) } // todo: change
         });
 
         var sphereMesh = new THREE.Mesh(sphereGeometry, basicMaterial.material);
+        sphereMesh.position.z += Math.PI / 4;
         scene.add(sphereMesh);
 
         var square = new THREE.Geometry();
@@ -115,8 +114,6 @@
             if (keyboard.pressed('W'))
                 camera.position.z -= cameraSpeed * delta;
 
-            // todo: for whatever reason, translating changes the rotation of the camera..
-            // I think it has to do with not updating the global-space lookAt vector.
             if (keyboard.pressed('A')) 
                 camera.position.x -= cameraSpeed * delta;
    
@@ -129,6 +126,37 @@
             controls.update();
         }
 
+        function setupGUI() {
+            var gui = new dat.GUI({
+                height: 5 * 32 - 1
+            });
+
+            var params = {
+                roughness: 0.3,
+                phi: 2 * Math.PI,
+                theta: Math.PI / 4.0,
+                F0: 0.1
+            }
+
+            gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
+                sphereMesh.material.uniforms["roughness"] = {type: 'f', value: r };
+            });
+
+            gui.add(params, "phi", 0.0, 2.0 * Math.PI).onChange(function(p) {
+                sphereMesh.material.uniforms["phi"] = {type: 'f', value: p };
+            });
+
+            gui.add(params, "theta", 0.0, Math.PI / 2.0).onChange(function(t) {
+                sphereMesh.material.uniforms["theta"] = {type: 'f', value: t };
+            });
+
+            gui.add(params, "F0", 0.0, Math.PI / 2.0).onChange(function(f) {
+                sphereMesh.material.uniforms["phi"] = {type: 'f', value: f };
+            });
+
+        }
+
+        setupGUI();
         render();
 	</script>
 	</body>
