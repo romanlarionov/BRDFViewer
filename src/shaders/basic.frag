@@ -2,18 +2,23 @@
 precision mediump float;
 precision mediump int;
 
-uniform vec3 V;
-uniform vec3 L;
-uniform vec3 I;
-uniform vec3 C;
+uniform vec3 shading_intensity;
+uniform vec3 shading_color;
 
 varying vec3 P;
 varying vec3 N;
+varying vec3 L;
 
 void main() {
-    //N = normalize(N);
-    //vec3 viewDir = normalize(P - V);
-    //vec3 R = reflect(P - L, N);
+    vec3 normal = normalize(N);
+    vec3 viewDir = normalize(P);
+    vec3 light_dir = normalize(L - P);
+    vec3 reflection = normalize(reflect(-light_dir, normal));
 
-    gl_FragColor = vec4(C, 1.0);
+    vec3 diffuse = shading_intensity * max(dot(normal, light_dir), 0.0);
+    vec3 specular = shading_intensity * pow(max(dot(reflection, viewDir), 0.0), 64.0);
+
+    vec3 light = diffuse + specular + vec3(0.5);
+
+    gl_FragColor = vec4(shading_color * light, 1.0);
 }

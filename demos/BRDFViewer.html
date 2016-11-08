@@ -20,7 +20,7 @@
         // Set up three.js render context
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-        camera.position.z = 5;
+        camera.position.set(0.0, 5.0, 5.0);
         var cameraSpeed = 10;
         var clock = new THREE.Clock();
         var deltaTime;
@@ -32,7 +32,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         window.addEventListener("resize", onWindowResize, false);
         document.body.appendChild(renderer.domElement);
-        scene.background = new THREE.Color( 0x3C5C67);
+        scene.background = new THREE.Color(0x3C5C67);
 
         // User Input
         var keyboard = new THREEx.KeyboardState();
@@ -43,8 +43,8 @@
 
         // Scene objects
         var sphereFunc = function(u, v) {
-            var phi = u * 2 * Math.PI;
-            var theta = v * Math.PI;
+            var phi = v * 2 * Math.PI ;
+            var theta = u * Math.PI;
 
             var vert = new THREE.Vector3();
             vert.x = Math.sin(phi) * Math.cos(theta);
@@ -53,45 +53,34 @@
             return vert;
         };
 
-        var vertSubdivisions = 100;
-        var horiSubdivisions = 100;
+        var vertSubdivisions = 500;
+        var horiSubdivisions = 500;
         var sphereGeometry = new THREE.ParametricGeometry(sphereFunc, horiSubdivisions, vertSubdivisions);
+        sphereGeometry.computeVertexNormals();
         var basicMaterial = new Shader("basic", {
-            V : { type: 'v3', value: camera.position },
-            L : {type: 'v3', value: new THREE.Vector3(5.0, 20.0, 20.0)},
-            I : {type: 'v3', value: new THREE.Vector3(255.0, 255.0, 255.0)},
-            C : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)},
+            shading_light : {type: 'v3', value: new THREE.Vector3(5.0, 20.0, 20.0)},
+            shading_intensity : {type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5)},
+            shading_color : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)},
             roughness : {type: 'f', value: 0.3 },
             phi : {type: 'f', value: 0.0 },
             theta : {type: 'f', value: Math.PI / 4},
             F0 : {type: 'f', value: 0.1 },
-            light : {type: 'v3', value: new THREE.Vector3(-5.0, 3.0, 0.0) } // todo: change
+            plotLog : {type: 'f', value: 0.0 }
         });
 
-        var sphereMesh = new THREE.Mesh(sphereGeometry, basicMaterial.material);
-        sphereMesh.position.z += Math.PI / 4;
-        scene.add(sphereMesh);
+        var sphere = new THREE.Mesh(sphereGeometry, basicMaterial.material);
+        scene.add(sphere);
 
-        var square = new THREE.Geometry();
-        square.vertices.push(new THREE.Vector3(0, 0, 0));
-        square.vertices.push(new THREE.Vector3(0, 1, 0));
-        square.vertices.push(new THREE.Vector3(1, 1, 0));
-        square.vertices.push(new THREE.Vector3(0, 0, 0));
-        square.vertices.push(new THREE.Vector3(1, 1, 0));
-        square.vertices.push(new THREE.Vector3(1, 0, 0));
-        square.faces.push(new THREE.Face3(0, 1, 2));
-        square.faces.push(new THREE.Face3(3, 4, 5));
-        square.computeVertexNormals();
-        var squareMesh = new THREE.Mesh(square, basicMaterial.material);
-        squareMesh.position.set(-5, -5, -10);
-        //scene.add(squareMesh);
+        var wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, side:THREE.DoubleSide } ); 
+	    var squareGeometry = new THREE.PlaneGeometry(1,1,10,10);
+	    var square = new THREE.Mesh(squareGeometry, wireframeMaterial);
+        scene.add(square);
 
         var gridHelper = new THREE.GridHelper(25, 50, 0x60F4E1, 0xE7EDEC);
         scene.add(gridHelper);
 
         function updateScene()
         {
-            sphereMesh.material.uniforms["V"] = {type: 'v3', value: camera.position};
         }
 
         // Render
@@ -135,7 +124,8 @@
                 roughness: 0.3,
                 phi: 2 * Math.PI,
                 theta: Math.PI / 4.0,
-                F0: 0.1
+                F0: 0.1,
+                plotLog: false
             }
 
             gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
@@ -151,9 +141,12 @@
             });
 
             gui.add(params, "F0", 0.0, Math.PI / 2.0).onChange(function(f) {
-                sphereMesh.material.uniforms["phi"] = {type: 'f', value: f };
+                sphereMesh.material.uniforms["F0"] = {type: 'f', value: f };
             });
 
+            gui.add(params, "plotLog").onChange(function(p) {
+                sphereMesh.material.uniforms["plotLog"] = {type: 'f', value: ( (p) ? 1.0 : 0.0) };
+            });
         }
 
         setupGUI();
