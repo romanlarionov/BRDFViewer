@@ -11,17 +11,17 @@
 	<body>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
-	<script src="../lib/OBJLoader.js" type="text/javascript"></script>
-	<script src="../lib/MTLLoader.js" type="text/javascript"></script>
-	<script src="../lib/OrbitControls.js" type="text/javascript"></script>
+    <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="../lib/DDSLoader.js" type="text/javascript"></script>
 	<script src="../lib/KeyboardState.js" type="text/javascript"></script>
+    <script src='../lib/DAT.GUI.min.js' type='text/javascript'></script>
 	<script src="../src/js/model.js" type="text/javascript"></script>
 	<script src="../src/js/shader.js" type="text/javascript"></script>
     <script>
         // Set up three.js render context
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-        camera.position.z = 5;
+        camera.position.set(0.0, 5.0, 5.0);
         var cameraSpeed = 10;
         var clock = new THREE.Clock();
         var deltaTime;
@@ -33,6 +33,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         window.addEventListener("resize", onWindowResize, false);
         document.body.appendChild(renderer.domElement);
+        scene.background = new THREE.Color(0x3C5C67);
 
         // User Input
         var keyboard = new THREEx.KeyboardState();
@@ -41,101 +42,24 @@
 		controls.dampingFactor = 0.25;
 		controls.enableZoom = false;
 
-        // Environment Map
-        var cubeMapLoader = new THREE.CubeTextureLoader();
-        cubeMapLoader.setPath("../assets/cube_maps/woods/");
-        var cubeMap = cubeMapLoader.load(['posx.jpg', 'negx.jpg',
-                      'posy.jpg', 'negy.jpg',
-                      'posz.jpg', 'negz.jpg']);
-
-        var skyMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            envMap: cubeMap,
-            side: THREE.FrontSide
-        });
-
-        var skyGeometry = new THREE.BoxGeometry(2000, 2000, 2000);
-        var skyMesh = new THREE.Mesh(skyGeometry, skyMaterial);
-        scene.add(skyMesh);
-
-        cubeMap.format = THREE.RGBFormat;
-        scene.background = cubeMap;
-
-        var metalTypes = {
-            Gold: new THREE.Vector3(1.00, 0.71, 0.29),
-            Silver: new THREE.Vector3(0.95, 0.93, 0.88),
-            Copper: new THREE.Vector3(0.95, 0.64, 0.54),
-            Iron: new THREE.Vector3(0.56, 0.57, 0.58),
-            Aluminum: new THREE.Vector3(0.91, 0.92, 0.92)
-        }
-
         // Scene objects
-        var mirrorShader = new Shader("smooth_mirror", {
-            envMap: { type: 't', value: cubeMap },
-            camera: { type: 'v3', value: camera.position },
-            normalFresnel: { type: 'v3', value: metalTypes.Gold }
-        });
+	    scene.add( new THREE.AxisHelper() );
 
-        /*var normalMapMirrorShader = new Shader("smooth_mirror_map", {
-            envMap: { type: 't', value: cubeMap },
-            camera: { type: 'v3', value: camera.position }
-        });*/
+        var wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, side:THREE.DoubleSide } ); 
+	    var squareGeometry = new THREE.PlaneGeometry(1,1,10,10);
+	    var square = new THREE.Mesh(squareGeometry, wireframeMaterial);
+        scene.add(square);
 
-        var spaceman = new Model();
-        spaceman.loadJSON("../assets/models/ACES/", "spaceman", mirrorShader.material);
-        
-        var oldMan = new Model();
-        oldMan.loadOBJ("../assets/models/old_man/", "muro", null, function(obj) {
-            // todo: for some reason, copying the passed in shader does not work.
-            // Need to find a way to avoid new shader creation for every submesh.
-            var s = new Shader("smooth_mirror_map", {
-                envMap: { type: 't', value: cubeMap },
-                camera: { type: 'v3', value: camera.position },
-                bumpMap: {type: 't', value: obj.material["bumpMap"]},
-                normalFresnel: { type: 'v3', value: metalTypes.Silver }
-            });
+        var theta = 0.3;
+        var roughness = Math.PI / 4.0;
 
-            return s.material;
-        });
-
-        // Renderable square surface
-        var square = new THREE.Geometry();
-        square.vertices.push(new THREE.Vector3(0, 0, 0));
-        square.vertices.push(new THREE.Vector3(0, 1, 0));
-        square.vertices.push(new THREE.Vector3(1, 1, 0));
-        square.vertices.push(new THREE.Vector3(0, 0, 0));
-        square.vertices.push(new THREE.Vector3(1, 1, 0));
-        square.vertices.push(new THREE.Vector3(1, 0, 0));
-        square.faces.push(new THREE.Face3(0, 1, 2));
-        square.faces.push(new THREE.Face3(3, 4, 5));
-        square.computeVertexNormals();
-
-        var squareMesh = new THREE.Mesh(square, mirrorShader.material);
-        squareMesh.scale.set(15, 15, 0);
-        camera.add(squareMesh);
-        squareMesh.position.set(-5, -5, -10);
-        squareMesh.rotation.y += Math.PI;
-        scene.add(squareMesh);
+        var ddsLoader = new THREE.DDSLoader();
+        var ltc_invM_tex = ddsLoader.load("../assets/ltc_mat.dds");
+        var ltc_amp_tex = ddsLoader.load("../assets/ltc_amp.dds");
 
         function updateScene()
         {
-            delta = clock.getDelta();
-
-            if (spaceman.meshIsLoaded) {
-                spaceman.loadedMesh.position.y = -7;
-                spaceman.loadedMesh.position.z = 7;
-                spaceman.loadedMesh.rotation.y = Math.PI;
-                spaceman.loadedMesh.scale.set(5, 5, 5);
-                spaceman.updateUniforms({type: 'v3', value: camera.position});
-            }
-
-            if (oldMan.meshIsLoaded) {
-                oldMan.loadedMesh.position.set(0, -7, -7);
-                oldMan.loadedMesh.scale.set(0.05, 0.05, 0.05);
-                oldMan.updateUniforms({type: 'v3', value: camera.position});
-            }
-
-            squareMesh.material.uniforms["camera"] = {type: 'v3', value: camera.position};
+            var t = ltc_invM_tex;
         }
 
         // Render
@@ -158,20 +82,38 @@
             if (keyboard.pressed('W'))
                 camera.position.z -= cameraSpeed * delta;
 
-            // todo: for whatever reason, translating changes the rotation of the camera..
-            // I think it has to do with not updating the global-space lookAt vector.
             if (keyboard.pressed('A')) 
                 camera.position.x -= cameraSpeed * delta;
    
             if (keyboard.pressed('S'))
                 camera.position.z += cameraSpeed * delta;
 
-            if (keyboard.pressed('d'))
+            if (keyboard.pressed('D'))
                 camera.position.x += cameraSpeed * delta;
 
             controls.update();
         }
 
+        function setupGUI() {
+            var gui = new dat.GUI({
+                height: 5 * 32 - 1
+            });
+
+            var params = {
+                roughness: 0.3,
+                theta: Math.PI / 4.0
+            }
+
+            gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
+                roughness = r;
+            });
+
+            gui.add(params, "theta", 0.0, Math.PI / 2.0).onChange(function(t) {
+                theta = t;
+            });
+        }
+
+        setupGUI();
         render();
 	</script>
 	</body>
