@@ -54,20 +54,21 @@ float moveToLogSpace(float x)
 void main()
 {
     float t = -M_PI/2.0;
-    vec3 v0 = vec3(1.0, 0.0, 0.0);
-    vec3 v1 = vec3(0.0, cos(t), sin(t));
+    float p = M_PI;
+    vec3 v0 = vec3(cos(p), -sin(p), 0.0);
+    vec3 v1 = vec3(sin(p), cos(p)*cos(t), sin(t));
     vec3 v2 = vec3(0.0, -sin(t), cos(t));
     mat3 rotation = mat3(v0, v1, v2);
 
     vec3 w_position = vec3(modelMatrix * vec4(position, 0.0));
     vec3 w_normal   = vec3(0.0, 0.0, 1.0);
     vec3 view       = normalize(w_position);
-    vec3 light_dir  = normalize(vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta)));
+    vec3 light_dir  = normalize(vec3(sin(theta), 0.0, cos(theta)));
     vec3 halfway    = normalize(light_dir + view);
 
-    float NdotL = max(dot(w_normal, light_dir), 0.0);
-    float NdotV = max(dot(w_normal, view), 0.0);
-    float NdotH = max(dot(w_normal, halfway), 0.0);
+    float NdotL = max(light_dir.z, 0.0);
+    float NdotV = max(view.z, 0.0);
+    float NdotH = max(halfway.z, 0.0);
     float VdotH = max(dot(view, halfway), 0.0);
 
     float roughness4 = roughness * roughness * roughness * roughness;

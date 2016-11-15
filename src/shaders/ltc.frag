@@ -8,6 +8,7 @@ uniform vec3 shading_color;
 varying vec3 P;
 varying vec3 N;
 varying vec3 L;
+varying vec3 C;
 
 void main() {
     vec3 normal = normalize(N);
@@ -20,5 +21,6 @@ void main() {
 
     vec3 light = diffuse + specular + vec3(0.5);
 
-    gl_FragColor = vec4(shading_color * light, 1.0);
+    // gl_FragColor = vec4(shading_color * light, 1.0);
+    gl_FragColor = vec4(C * light, 1.0);
 }

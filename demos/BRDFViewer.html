@@ -12,6 +12,7 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
     <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="../assets/ltc_tables.js" type="text/javascript"></script>
 	<script src="../lib/KeyboardState.js" type="text/javascript"></script>
     <script src='../lib/DAT.GUI.min.js' type='text/javascript'></script>
 	<script src="../src/js/model.js" type="text/javascript"></script>
@@ -42,6 +43,22 @@
 		controls.enableZoom = false;
 
         // Scene objects
+        //var textureLoader = new THREE.TextureLoader();
+        //var ltc_M_tex = textureLoader.load("../assets/ltc_M.png");
+        //var ltc_mag_tex = textureLoader.load("../assets/ltc_Amp.png");
+
+        //var ddsLoader = new THREE.DDSLoader();
+        //var ltc_M_tex = ddsLoader.load("../assets/ltc_mat.dds");
+        //var ltc_mag_tex = ddsLoader.load("../assets/ltc_amp.dds");
+
+        var ltc_mat_data = new Float32Array(g_ltc_mat);
+        var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.LuminanceFormat, THREE.FloatType);
+        ltc_mat_tex.needsUpdate = true;
+
+        var ltc_amp_data = new Uint8Array(g_ltc_mag);
+        var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.RFormat);
+        //ltc_amp_tex.needsUpdate = true;
+
         var sphereFunc = function(u, v) {
             var phi = v * 2 * Math.PI ;
             var theta = u * Math.PI;
@@ -68,13 +85,28 @@
             plotLog : {type: 'f', value: 0.0 }
         });
 
+        var ltcMaterial = new Shader("ltc", {
+            shading_light : {type: 'v3', value: new THREE.Vector3(5.0, 20.0, 20.0)},
+            shading_intensity : {type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5)},
+            shading_color : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)},
+            roughness : {type: 'f', value: 0.3 },
+            theta : {type: 'f', value: Math.PI / 4},
+            F0 : {type: 'f', value: 0.1 },
+            plotLog : {type: 'f', value: 0.0 },
+            ltc_M : {type: 't', value: ltc_mat_tex },
+            ltc_Amp : {type: 't', value: ltc_amp_tex }
+        });
+
         var sphere = new THREE.Mesh(sphereGeometry, basicMaterial.material);
-        scene.add(sphere);
+        //scene.add(sphere);
+
+        var sphereLTC = new THREE.Mesh(sphereGeometry, ltcMaterial.material);
+        scene.add(sphereLTC);
 
         var wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, side:THREE.DoubleSide } ); 
 	    var squareGeometry = new THREE.PlaneGeometry(1,1,10,10);
 	    var square = new THREE.Mesh(squareGeometry, wireframeMaterial);
-        scene.add(square);
+        //scene.add(square);
 
         var gridHelper = new THREE.GridHelper(25, 50, 0x60F4E1, 0xE7EDEC);
         scene.add(gridHelper);
@@ -109,7 +141,7 @@
             if (keyboard.pressed('S'))
                 camera.position.z += cameraSpeed * delta;
 
-            if (keyboard.pressed('d'))
+            if (keyboard.pressed('D'))
                 camera.position.x += cameraSpeed * delta;
 
             controls.update();
@@ -125,27 +157,37 @@
                 phi: 2 * Math.PI,
                 theta: Math.PI / 4.0,
                 F0: 0.1,
-                plotLog: false
+                plotLog: false,
+                ltc: true
             }
 
             gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
-                sphereMesh.material.uniforms["roughness"] = {type: 'f', value: r };
+                sphere.material.uniforms["roughness"] = {type: 'f', value: r };
+                sphereLTC.material.uniforms["roughness"] = {type: 'f', value: r };
             });
 
             gui.add(params, "phi", 0.0, 2.0 * Math.PI).onChange(function(p) {
-                sphereMesh.material.uniforms["phi"] = {type: 'f', value: p };
+                sphere.material.uniforms["phi"] = {type: 'f', value: p };
+                sphereLTC.material.uniforms["phi"] = {type: 'f', value: p };
             });
 
             gui.add(params, "theta", 0.0, Math.PI / 2.0).onChange(function(t) {
-                sphereMesh.material.uniforms["theta"] = {type: 'f', value: t };
+                sphere.material.uniforms["theta"] = {type: 'f', value: t };
+                sphereLTC.material.uniforms["theta"] = {type: 'f', value: t };
             });
 
             gui.add(params, "F0", 0.0, Math.PI / 2.0).onChange(function(f) {
-                sphereMesh.material.uniforms["F0"] = {type: 'f', value: f };
+                sphere.material.uniforms["F0"] = {type: 'f', value: f };
+                sphereLTC.material.uniforms["F0"] = {type: 'f', value: f };
             });
 
             gui.add(params, "plotLog").onChange(function(p) {
-                sphereMesh.material.uniforms["plotLog"] = {type: 'f', value: ( (p) ? 1.0 : 0.0) };
+                sphere.material.uniforms["plotLog"] = {type: 'f', value: ( (p) ? 1.0 : 0.0) };
+                sphereLTC.material.uniforms["plotLog"] = {type: 'f', value: ( (p) ? 1.0 : 0.0) };
+            });
+
+            gui.add(params, "ltc").onChange(function(l) {
+                //sphere.material.uniforms["ltc"] = {type: 'f', value: ( (l) ? 1.0 : 0.0) };
             });
         }
 

@@ -46,20 +46,55 @@
 	    scene.add( new THREE.AxisHelper() );
 
         var wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, side:THREE.DoubleSide } ); 
-	    var squareGeometry = new THREE.PlaneGeometry(1,1,10,10);
+	    /*var squareGeometry = new THREE.PlaneGeometry(1,1,10,10);
 	    var square = new THREE.Mesh(squareGeometry, wireframeMaterial);
+	    var square2 = new THREE.Mesh(squareGeometry, wireframeMaterial);
+        scene.add(square);
+        scene.add(square2);*/
+
+        var textureLoader = new THREE.TextureLoader();
+        var ltc_invM_tex = textureLoader.load("../assets/ltc_Minv.png");
+        var ltc_mag_tex = textureLoader.load("../assets/ltc_Amp.png");
+
+        var basicMaterial = new Shader("transformation", {
+            roughness : {type: 'f', value: 0.3 },
+            theta : {type: 'f', value: Math.PI / 4},
+            ltc_Minv : {type: 't', value: ltc_invM_tex },
+            ltc_Amp : {type: 't', value: ltc_mag_tex }
+        });
+
+        var squareGeometry = new THREE.Geometry();
+        squareGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(0, 1, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(1, 1, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(1, 1, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(1, 0, 0));
+        squareGeometry.faces.push(new THREE.Face3(0, 1, 2));
+        squareGeometry.faces.push(new THREE.Face3(3, 4, 5));
+        squareGeometry.computeVertexNormals();
+        var square = new THREE.Mesh(squareGeometry, wireframeMaterial);
+        square.position.set(-5, 0, 0);
         scene.add(square);
 
-        var theta = 0.3;
-        var roughness = Math.PI / 4.0;
+        var square2 = new THREE.Mesh(squareGeometry, basicMaterial.material);
+        square2.position.set(0, 5, -5);
+        //square2.scale.set(10, 10, 10);
+        scene.add(square2);
 
         var ddsLoader = new THREE.DDSLoader();
-        var ltc_invM_tex = ddsLoader.load("../assets/ltc_mat.dds");
-        var ltc_amp_tex = ddsLoader.load("../assets/ltc_amp.dds");
 
         function updateScene()
         {
-            var t = ltc_invM_tex;
+            if (ltc_invM_tex.image !== undefined)
+            {
+                var t = textureLoader;
+                //var Minv = ltc_invM_tex
+                //for (var i = 0; i < 6; i++)
+                //{
+                //    square2.geometry.vertices[i] =  square2.geometry.vertices[i];
+                //}
+            }
         }
 
         // Render
@@ -105,11 +140,11 @@
             }
 
             gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
-                roughness = r;
+                square2.material.uniforms["roughness"] = {type: 'f', value: r };
             });
 
             gui.add(params, "theta", 0.0, Math.PI / 2.0).onChange(function(t) {
-                theta = t;
+                square2.material.uniforms["theta"] = {type: 'f', value: t };
             });
         }
 
