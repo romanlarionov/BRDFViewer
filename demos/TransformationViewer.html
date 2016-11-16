@@ -4,11 +4,28 @@
 		<meta charset=utf-8>
 		<title>Ideal Mirror Reflection Program</title>
 		<style>
-			body { margin: 0; }
+            body {
+				color: #000;
+				font-family:Monospace;
+				font-size:20px;
+				text-align:center;
+
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
 			canvas { width: 100%; height: 100% }
+            #info {
+                position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+            }
 		</style>
 	</head>
 	<body>
+    <div id="container"></div>
+	<div id="info">Linearly Transformed Cosines: Polygon Transformation Viewer</div>
+
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
     <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
@@ -95,7 +112,7 @@
         //scene.add(square);
 
         var lineGeometry = new THREE.Geometry();
-        //lineGeometry.vertices.push(polygonGeometry.vertices[0]);
+        lineGeometry.vertices.push(polygonGeometry.vertices[0]);
         //lineGeometry.vertices.push(new THREE.Vector3(, , ));
         //lineGeometry.vertices.push(new THREE.Vector3(, , ));
 

@@ -1,13 +1,14 @@
 
-var Shader = function(file, uniforms) {
-    this.file = file;
+var Shader = function(vert_file, frag_file, uniforms) {
+    this.vert_file = vert_file;
+    this.frag_file = frag_file;
 
     if (!uniforms) uniforms = {};
     this.material = new THREE.RawShaderMaterial({
         uniforms,
         side: THREE.DoubleSide,
-        vertexShader: this._loadShaderFile(this.file + ".vert"),
-        fragmentShader: this._loadShaderFile(this.file + ".frag")
+        vertexShader: this._loadShaderFile(this.vert_file + ".vert"),
+        fragmentShader: this._loadShaderFile(this.frag_file + ".frag")
     });
 };
 
