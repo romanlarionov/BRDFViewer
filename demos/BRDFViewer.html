@@ -43,21 +43,21 @@
 		controls.enableZoom = false;
 
         // Scene objects
-        //var textureLoader = new THREE.TextureLoader();
-        //var ltc_M_tex = textureLoader.load("../assets/ltc_M.png");
-        //var ltc_mag_tex = textureLoader.load("../assets/ltc_Amp.png");
-
-        //var ddsLoader = new THREE.DDSLoader();
-        //var ltc_M_tex = ddsLoader.load("../assets/ltc_mat.dds");
-        //var ltc_mag_tex = ddsLoader.load("../assets/ltc_amp.dds");
-
         var ltc_mat_data = new Float32Array(g_ltc_mat);
-        var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.LuminanceFormat, THREE.FloatType);
+        var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.RGBAFormat, THREE.FloatType);
+        ltc_mat_tex.minFilter = THREE.NearestFilter;
+        ltc_mat_tex.magFilter = THREE.LinearFilter;
+        ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
+        ltc_mat_tex.wrapT = THREE.ClampToEdgeWrapping;
         ltc_mat_tex.needsUpdate = true;
 
-        var ltc_amp_data = new Uint8Array(g_ltc_mag);
-        var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.RFormat);
-        //ltc_amp_tex.needsUpdate = true;
+        var ltc_amp_data = new Float32Array(g_ltc_mag);
+        var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.AlphaFormat, THREE.FloatType);
+        ltc_amp_tex.minFilter = THREE.NearestFilter;
+        ltc_amp_tex.magFilter = THREE.LinearFilter;
+        ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
+        ltc_amp_tex.wrapT = THREE.ClampToEdgeWrapping;
+        ltc_amp_tex.needsUpdate = true;
 
         var sphereFunc = function(u, v) {
             var phi = v * 2 * Math.PI ;
@@ -93,7 +93,7 @@
             theta : {type: 'f', value: Math.PI / 4},
             F0 : {type: 'f', value: 0.1 },
             plotLog : {type: 'f', value: 0.0 },
-            ltc_M : {type: 't', value: ltc_mat_tex },
+            ltc_Minv : {type: 't', value: ltc_mat_tex },
             ltc_Amp : {type: 't', value: ltc_amp_tex }
         });
 

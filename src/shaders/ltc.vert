@@ -14,7 +14,7 @@ uniform float phi;
 uniform float theta;
 uniform float F0;
 uniform float plotLog;
-uniform sampler2D ltc_M;
+uniform sampler2D ltc_Minv;
 uniform sampler2D ltc_Amp;
 
 attribute vec3 position;
@@ -47,63 +47,47 @@ void main()
 
     vec3 w_position = vec3(modelMatrix * vec4(position, 0.0));
     vec3 view = normalize(w_position);
-    // float NdotV = max(view.z, 0.0);
-    float NdotV = view.z;
-    float view_theta = min(max(acos(NdotV), 0.0), 1.570795);
-    //float view_theta = atan(sqrt(view.x * view.x + view.y * view.y) / view.z); //atan(view.y/view.x);
+    float NdotV = max(view.z, 0.0);
+    float view_theta = acos(NdotV);
+    float view_phi = acos(view.x / sin(view_theta));
 
-    //float NdotH = max(dot(w_normal, halfway), 0.0);
-    //float VdotH = max(dot(view, halfway), 0.0);
+    //float balance = (view_phi >= M_PI) ? -1.0 : 1.0;
 
     vec2 uv = vec2(roughness, view_theta / 1.570795);
     uv = uv * LUT_SCALE + LUT_BIAS;
-    vec4 t = texture2D(ltc_M, uv);
+    vec4 t = texture2D(ltc_Minv, uv);
+    float amp = texture2D(ltc_Amp, uv).w;
 
-    vec3 m0 = vec3(1.0, 0.0, -t.y);
-    vec3 m1 = vec3(0.0, (t.x - (t.y * t.z)) / t.z, 0.0);
-    vec3 m2 = vec3(-t.w, 0.0, t.x);
+    float q = (t.x - (t.y * t.w));
 
-    vec3 n0 = vec3(t.x, 0.0, t.y);
+    vec3 m0 = vec3(t.x, 0.0, -t.y);
+    vec3 m1 = vec3(0.0, q / t.z, 0.0);
+    vec3 m2 = vec3(-t.w, 0.0, 1.0);
+
+    vec3 n0 = vec3(1.0, 0.0, t.y);
     vec3 n1 = vec3(0.0, t.z, 0.0);
-    vec3 n2 = vec3(t.w, 0.0, 1.0);
+    vec3 n2 = vec3(t.w, 0.0, t.x);
 
-    mat3 M = mat3(m0, m1, m2);
+    mat3 M = (1.0 / q) * mat3(m0, m1, m2);
     mat3 Minv = mat3(n0, n1, n2);
 
-    float amp = texture2D(ltc_Amp, uv).x;
-    
-    /*vec3 m0 = vec3(0.7, 0.0, 0.0);
-    vec3 m1 = vec3(0.0, 0.2, 0.0);
-    vec3 m2 = vec3(0.4, 0.0, 1.0);
-    mat3 M = mat3(m0, m1, m2);*/
+    vec3 light_dir_transformed = normalize(vec3(sin(theta), 0.0, cos(theta)));
+    vec3 light_dir_original    = Minv * light_dir_transformed;
+    vec3 light_dir_original_n  = normalize(light_dir_original);
 
-    //vec3 light_dir_transformed = normalize(vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta)));
-    vec3 light_dir_original = Minv * normalize(vec3(sin(theta), 0.0, cos(theta)));
-    vec3 light_dir_transformed = M * normalize(light_dir_original);
-    vec3 light_dir_original_n = normalize(light_dir_original);
-
-    float norm = length(light_dir_transformed);
-    float detMinv = (t.x * 10.0 * t.z) - (t.y * t.z * t.w);
-    float detM = ((t.x - (t.y * t.z)) / t.z) * (t.x - (t.y * t.w));
+    float norm = length(light_dir_transformed); // should be 1
+    float detMinv = t.z * q;//(t.x * t.z) - (t.y * t.z * t.w);
+    float detM = 1.0 / detMinv;
+    //float detM = ((t.x - (t.y * t.z)) / t.z) * (t.x - (t.y * t.w));
     float jacobian = detM / (norm * norm * norm);
-    //float jacobian = max(detMinv / (norm * norm * norm), 0.1);
-    //float jacobian = detMinv / (norm * norm * norm);
 
     float D0 = (1.0 / M_PI) * max(light_dir_original_n.z, 0.0);
-    float result = amp * D0 / 0.0;
+    float result = amp * D0 / jacobian;
 
     //D = (plotLog > 0.5) ? moveToLogSpace(D) : D;
 
-    C = vec3(detMinv);
-    //vec3 transformed_position = normalize(M * view) * D0 * jacobian;// * result;
-    vec3 transformed_position = normalize(rotation * M * view) * result;
-
-    // I dont think I can actually do this. If I transform the light direction,
-    // and calculate the brdf value then I'm just calculating the lambertian
-    // distribution for a single light direction. D_0 is only defined as a distribution
-    // so I would have to have to sample for a number of incident light directions 
-    // to get a good representation. It doesn't make much sense to do a single sample
-    // direction defined by theta. 
+    C = (t.x >= 0.0) ? vec3(1.0) : vec3(0.0);
+    vec3 transformed_position = rotation * normalize(M * view) * result * NdotV * 25.0;
 
     // Used for actual shading
     gl_Position = projectionMatrix * viewMatrix * vec4(transformed_position, 1.0);

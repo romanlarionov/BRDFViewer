@@ -21,6 +21,6 @@ void main() {
 
     vec3 light = diffuse + specular + vec3(0.5);
 
-    // gl_FragColor = vec4(shading_color * light, 1.0);
+    //gl_FragColor = vec4(shading_color * light, 1.0);
     gl_FragColor = vec4(C * light, 1.0);
 }

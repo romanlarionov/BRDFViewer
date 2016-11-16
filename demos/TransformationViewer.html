@@ -12,8 +12,8 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
     <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="../assets/ltc_tables.js" type="text/javascript"></script>
 	<script src="../lib/DDSLoader.js" type="text/javascript"></script>
-	<script src="../lib/KeyboardState.js" type="text/javascript"></script>
     <script src='../lib/DAT.GUI.min.js' type='text/javascript'></script>
 	<script src="../src/js/model.js" type="text/javascript"></script>
 	<script src="../src/js/shader.js" type="text/javascript"></script>
@@ -23,8 +23,6 @@
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
         camera.position.set(0.0, 5.0, 5.0);
         var cameraSpeed = 10;
-        var clock = new THREE.Clock();
-        var deltaTime;
         
         var ambient = new THREE.AmbientLight(0xFFFFFF);
 		scene.add(ambient);
@@ -36,71 +34,85 @@
         scene.background = new THREE.Color(0x3C5C67);
 
         // User Input
-        var keyboard = new THREEx.KeyboardState();
         var controls = new THREE.OrbitControls(camera, renderer.domElement);
 		controls.enableDamping = true;
 		controls.dampingFactor = 0.25;
 		controls.enableZoom = false;
 
         // Scene objects
+        var ltc_mat_data = new Float32Array(g_ltc_mat);
+        var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.RGBAFormat, THREE.FloatType);
+        ltc_mat_tex.minFilter = THREE.NearestFilter;
+        ltc_mat_tex.magFilter = THREE.LinearFilter;
+        ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
+        ltc_mat_tex.wrapT = THREE.ClampToEdgeWrapping;
+        ltc_mat_tex.needsUpdate = true;
+
+        var ltc_amp_data = new Float32Array(g_ltc_mag);
+        var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.AlphaFormat, THREE.FloatType);
+        ltc_amp_tex.minFilter = THREE.NearestFilter;
+        ltc_amp_tex.magFilter = THREE.LinearFilter;
+        ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
+        ltc_amp_tex.wrapT = THREE.ClampToEdgeWrapping;
+        ltc_amp_tex.needsUpdate = true;
+
 	    scene.add( new THREE.AxisHelper() );
 
         var wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, side:THREE.DoubleSide } ); 
-	    /*var squareGeometry = new THREE.PlaneGeometry(1,1,10,10);
-	    var square = new THREE.Mesh(squareGeometry, wireframeMaterial);
-	    var square2 = new THREE.Mesh(squareGeometry, wireframeMaterial);
-        scene.add(square);
-        scene.add(square2);*/
-
-        var textureLoader = new THREE.TextureLoader();
-        var ltc_invM_tex = textureLoader.load("../assets/ltc_Minv.png");
-        var ltc_mag_tex = textureLoader.load("../assets/ltc_Amp.png");
-
         var basicMaterial = new Shader("transformation", {
-            roughness : {type: 'f', value: 0.3 },
-            theta : {type: 'f', value: Math.PI / 4},
-            ltc_Minv : {type: 't', value: ltc_invM_tex },
-            ltc_Amp : {type: 't', value: ltc_mag_tex }
+            roughness : {type: 'f', value: 0.83 },
+            theta : {type: 'f', value: 0.0 },
+            ltc_Minv : {type: 't', value: ltc_mat_tex },
+            ltc_Amp : {type: 't', value: ltc_amp_tex },
+            norm: {type: 'f', value: 0.0 },
         });
 
+        var squareFunc = function(u, v) {
+            return new THREE.Vector3(u,v, 0);
+        };
+
+        var vertSubdivisions = 500;
+        var horiSubdivisions = 500;
+        var polygonFunc = squareFunc;
+        var polygonGeometry = new THREE.ParametricGeometry(polygonFunc, horiSubdivisions, vertSubdivisions);
+        polygonGeometry.computeVertexNormals();
+
         var squareGeometry = new THREE.Geometry();
-        squareGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(0, 1, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(-1, -1, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(1, -1, 0));
         squareGeometry.vertices.push(new THREE.Vector3(1, 1, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
         squareGeometry.vertices.push(new THREE.Vector3(1, 1, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(1, 0, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(-1, 1, 0));
+        squareGeometry.vertices.push(new THREE.Vector3(-1, -1, 0));
+
         squareGeometry.faces.push(new THREE.Face3(0, 1, 2));
         squareGeometry.faces.push(new THREE.Face3(3, 4, 5));
         squareGeometry.computeVertexNormals();
-        var square = new THREE.Mesh(squareGeometry, wireframeMaterial);
-        square.position.set(-5, 0, 0);
-        scene.add(square);
+        var square = new THREE.Mesh(polygonGeometry, wireframeMaterial);
+        square.position.set(-2, 2, 0);
+        square.rotation.set(0, -Math.PI/2, 0);
+        square.scale.set(1, 1, 1);
+        //scene.add(square);
 
-        var square2 = new THREE.Mesh(squareGeometry, basicMaterial.material);
-        square2.position.set(0, 5, -5);
-        //square2.scale.set(10, 10, 10);
+        var lineGeometry = new THREE.Geometry();
+        //lineGeometry.vertices.push(polygonGeometry.vertices[0]);
+        //lineGeometry.vertices.push(new THREE.Vector3(, , ));
+        //lineGeometry.vertices.push(new THREE.Vector3(, , ));
+
+        var square2 = new THREE.Mesh(polygonGeometry, basicMaterial.material);
+        square2.position.set(-2, 2, 0);
+        square2.rotation.set(0, -Math.PI/2, 0);
+        square2.scale.set(1, 1, 1);
         scene.add(square2);
-
-        var ddsLoader = new THREE.DDSLoader();
 
         function updateScene()
         {
-            if (ltc_invM_tex.image !== undefined)
-            {
-                var t = textureLoader;
-                //var Minv = ltc_invM_tex
-                //for (var i = 0; i < 6; i++)
-                //{
-                //    square2.geometry.vertices[i] =  square2.geometry.vertices[i];
-                //}
-            }
         }
 
         // Render
         function render() {
             requestAnimationFrame(render);
-            checkInput();
+            controls.update();
             updateScene();
             renderer.render(scene, camera);
         }
@@ -111,22 +123,10 @@
             renderer.setSize(window.innerWidth, window.innderHeight);
         }
 
-        function checkInput() {
-            delta = clock.getDelta();
-
-            if (keyboard.pressed('W'))
-                camera.position.z -= cameraSpeed * delta;
-
-            if (keyboard.pressed('A')) 
-                camera.position.x -= cameraSpeed * delta;
-   
-            if (keyboard.pressed('S'))
-                camera.position.z += cameraSpeed * delta;
-
-            if (keyboard.pressed('D'))
-                camera.position.x += cameraSpeed * delta;
-
-            controls.update();
+        function resetDefaults() {
+            square2.material.uniforms["roughness"] = {type: 'f', value: 0.83 };
+            square2.material.uniforms["theta"] = {type: 'f', value: 0.0 };
+            square2.material.uniforms["norm"] = {type: 'f', value: 0.0 };
         }
 
         function setupGUI() {
@@ -135,8 +135,12 @@
             });
 
             var params = {
-                roughness: 0.3,
-                theta: Math.PI / 4.0
+                roughness: 0.83,
+                theta: 0.0,
+                normalize: false, 
+                reset: function() {
+                    resetDefaults();
+                }
             }
 
             gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
@@ -145,6 +149,10 @@
 
             gui.add(params, "theta", 0.0, Math.PI / 2.0).onChange(function(t) {
                 square2.material.uniforms["theta"] = {type: 'f', value: t };
+            });
+
+            gui.add(params, "normalize", 0.0, 1.0).onChange(function(n) {
+                square2.material.uniforms["norm"] = {type: 'f', value: (n) ? 1.0 : 0.0 };
             });
         }
 
