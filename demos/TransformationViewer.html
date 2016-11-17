@@ -29,7 +29,9 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
     <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
-	<script src="../assets/ltc_tables.js" type="text/javascript"></script>
+	<script src="../assets/ltc_ggx.js" type="text/javascript"></script>
+	<script src="../assets/ltc_beckmann.js" type="text/javascript"></script>
+	<script src="../assets/ltc_disney_diffuse.js" type="text/javascript"></script>
 	<script src="../lib/DDSLoader.js" type="text/javascript"></script>
     <script src='../lib/DAT.GUI.min.js' type='text/javascript'></script>
 	<script src="../src/js/model.js" type="text/javascript"></script>
@@ -80,9 +82,9 @@
         var that = this;
         var brdfTypes = { GGXSmith: 0, Beckmann: 1, DisneyDiffuse: 2};
         var brdfList = [
-                storeTransformationTexture(g_ltc_mat, g_ltc_mag),
-                {"mat": [], "amp": []},
-                {"mat": [], "amp": []}
+                storeTransformationTexture(g_ggx_Minv, g_ggx_Mag),
+                storeTransformationTexture(g_beckmann_Minv, g_beckmann_Mag),
+                storeTransformationTexture(g_disney_diffuse_Minv, g_disney_diffuse_Mag)
             ];
 
         // Scene objects

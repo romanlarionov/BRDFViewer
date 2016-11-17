@@ -47,13 +47,8 @@ void main()
 
     vec3 w_position = vec3(modelMatrix * vec4(position, 0.0));
     vec3 view = normalize(w_position);
-    float NdotV = max(view.z, 0.0);
-    float view_theta = acos(NdotV);
-    float view_phi = acos(view.x / sin(view_theta));
 
-    //float balance = (view_phi >= M_PI) ? -1.0 : 1.0;
-
-    vec2 uv = vec2(roughness, view_theta / 1.570795);
+    vec2 uv = vec2(roughness, theta / 1.570795);
     uv = uv * LUT_SCALE + LUT_BIAS;
     vec4 t = texture2D(ltc_Minv, uv);
     float amp = texture2D(ltc_Amp, uv).w;
@@ -71,28 +66,26 @@ void main()
     mat3 M = (1.0 / q) * mat3(m0, m1, m2);
     mat3 Minv = mat3(n0, n1, n2);
 
-    vec3 light_dir_transformed = normalize(vec3(sin(theta), 0.0, cos(theta)));
-    vec3 light_dir_original    = Minv * light_dir_transformed;
-    vec3 light_dir_original_n  = normalize(light_dir_original);
+    // all below: refer to https://github.com/romanlarionov/LTC_Fitting/blob/master/LTC.h
+    vec3 sample_transformed_n = normalize(M * view);
+    vec3 sample_original = normalize(Minv * sample_transformed_n);
+    vec3 sample_transformed = M * sample_original;
 
-    float norm = length(light_dir_transformed); // should be 1
-    float detMinv = t.z * q;//(t.x * t.z) - (t.y * t.z * t.w);
+    float norm = length(sample_transformed);
+    float detMinv = t.z * q;
     float detM = 1.0 / detMinv;
-    //float detM = ((t.x - (t.y * t.z)) / t.z) * (t.x - (t.y * t.w));
     float jacobian = detM / (norm * norm * norm);
+    float D = (1.0 / M_PI) * max(sample_original.z, 0.0);
+    float result = amp * D / jacobian;
 
-    float D0 = (1.0 / M_PI) * max(light_dir_original_n.z, 0.0);
-    float result = amp * D0 / jacobian;
+    result = (plotLog > 0.5) ? moveToLogSpace(result) : result;
 
-    //D = (plotLog > 0.5) ? moveToLogSpace(D) : D;
-
-    C = (t.x >= 0.0) ? vec3(1.0) : vec3(0.0);
-    vec3 transformed_position = rotation * normalize(M * view) * result * NdotV * 25.0;
+    vec3 t_position = rotation * sample_transformed_n * result;
 
     // Used for actual shading
-    gl_Position = projectionMatrix * viewMatrix * vec4(transformed_position, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * vec4(t_position, 1.0);
 
     N = normalMatrix * normal;
-    P = vec3(viewMatrix * vec4(w_position, 1.0));
+    P = vec3(viewMatrix * vec4(t_position, 1.0));
     L = vec3(viewMatrix * vec4(shading_light, 1.0));
 }
