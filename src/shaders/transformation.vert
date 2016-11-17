@@ -35,7 +35,7 @@ void main()
     mat3 Minv = mat3(v0, v1, v2);
 
     vec4 w_position = modelMatrix * vec4(position, 1.0);
-    vec3 t_position = Minv * vec3(w_position);
+    vec3 t_position = (Minv * vec3(w_position));
     t_position = (norm > 0.5) ? normalize(t_position) : t_position;
     gl_Position = projectionMatrix * viewMatrix * vec4(t_position, 1.0);
 

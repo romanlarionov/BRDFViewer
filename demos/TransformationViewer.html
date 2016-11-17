@@ -56,72 +56,108 @@
 		controls.dampingFactor = 0.25;
 		controls.enableZoom = false;
 
+        var storeTransformationTexture = function(ltc_mat, ltc_amp) {
+
+        	var ltc_mat_data = new Float32Array(ltc_mat);
+        	var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.RGBAFormat, THREE.FloatType);
+        	ltc_mat_tex.minFilter = THREE.NearestFilter;
+        	ltc_mat_tex.magFilter = THREE.LinearFilter;
+        	ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
+        	ltc_mat_tex.wrapT = THREE.ClampToEdgeWrapping;
+        	ltc_mat_tex.needsUpdate = true;
+
+        	var ltc_amp_data = new Float32Array(ltc_amp);
+        	var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.AlphaFormat, THREE.FloatType);
+        	ltc_amp_tex.minFilter = THREE.NearestFilter;
+        	ltc_amp_tex.magFilter = THREE.LinearFilter;
+        	ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
+        	ltc_amp_tex.wrapT = THREE.ClampToEdgeWrapping;
+        	ltc_amp_tex.needsUpdate = true;
+
+            return {"mat": ltc_mat_tex, "amp": ltc_amp_tex};
+        }
+        
+        var that = this;
+        var brdfTypes = { GGXSmith: 0, Beckmann: 1, DisneyDiffuse: 2};
+        var brdfList = [
+                storeTransformationTexture(g_ltc_mat, g_ltc_mag),
+                {"mat": [], "amp": []},
+                {"mat": [], "amp": []}
+            ];
+
         // Scene objects
-        var ltc_mat_data = new Float32Array(g_ltc_mat);
-        var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.RGBAFormat, THREE.FloatType);
-        ltc_mat_tex.minFilter = THREE.NearestFilter;
-        ltc_mat_tex.magFilter = THREE.LinearFilter;
-        ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
-        ltc_mat_tex.wrapT = THREE.ClampToEdgeWrapping;
-        ltc_mat_tex.needsUpdate = true;
+		    scene.add(new THREE.AxisHelper());
 
-        var ltc_amp_data = new Float32Array(g_ltc_mag);
-        var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.AlphaFormat, THREE.FloatType);
-        ltc_amp_tex.minFilter = THREE.NearestFilter;
-        ltc_amp_tex.magFilter = THREE.LinearFilter;
-        ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
-        ltc_amp_tex.wrapT = THREE.ClampToEdgeWrapping;
-        ltc_amp_tex.needsUpdate = true;
+        	var basicMaterial = new Shader("transformation", "transformation", {
+        	    roughness : {type: 'f', value: 0.83 },
+        	    theta : {type: 'f', value: 0.0 },
+        	    ltc_Minv : {type: 't', value: brdfList[0].mat},
+        	    ltc_Amp : {type: 't', value: brdfList[0].amp},
+        	    norm: {type: 'f', value: 0.0 }
+        	});
 
-	    scene.add( new THREE.AxisHelper() );
+        	var transformedMaterial = new Shader("transformation", "transformation", {
+        	    roughness : {type: 'f', value: 0.83 },
+        	    theta : {type: 'f', value: 0.0 },
+        	    ltc_Minv : {type: 't', value: brdfList[0].mat},
+        	    ltc_Amp : {type: 't', value: brdfList[0].amp},
+        	    norm: {type: 'f', value: 1.0 }
+        	})
 
-        var wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, side:THREE.DoubleSide } ); 
-        var basicMaterial = new Shader("transformation", {
-            roughness : {type: 'f', value: 0.83 },
-            theta : {type: 'f', value: 0.0 },
-            ltc_Minv : {type: 't', value: ltc_mat_tex },
-            ltc_Amp : {type: 't', value: ltc_amp_tex },
-            norm: {type: 'f', value: 0.0 },
-        });
+        	var squareFunc = function(u, v) {
+        	    return new THREE.Vector3(u,v, 0);
+        	};
 
-        var squareFunc = function(u, v) {
-            return new THREE.Vector3(u,v, 0);
-        };
+        	var vertSubdivisions = 500;
+        	var horiSubdivisions = 500;
+        	var polygonFunc = squareFunc;
+        	var polygonGeometry = new THREE.ParametricGeometry(polygonFunc, horiSubdivisions, vertSubdivisions);
 
-        var vertSubdivisions = 500;
-        var horiSubdivisions = 500;
-        var polygonFunc = squareFunc;
-        var polygonGeometry = new THREE.ParametricGeometry(polygonFunc, horiSubdivisions, vertSubdivisions);
-        polygonGeometry.computeVertexNormals();
+        	var sphereFunc = function(u, v) {
+        	    var phi = v * 2 * Math.PI ;
+        	    var theta = u * Math.PI;
 
-        var squareGeometry = new THREE.Geometry();
-        squareGeometry.vertices.push(new THREE.Vector3(-1, -1, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(1, -1, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(1, 1, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(1, 1, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(-1, 1, 0));
-        squareGeometry.vertices.push(new THREE.Vector3(-1, -1, 0));
+        	    var z = Math.cos(phi);
+        	    var x = z * Math.sin(phi) * Math.cos(theta);
+        	    var y = z * Math.sin(phi) * Math.sin(theta);
+        	    z = z * z;
 
-        squareGeometry.faces.push(new THREE.Face3(0, 1, 2));
-        squareGeometry.faces.push(new THREE.Face3(3, 4, 5));
-        squareGeometry.computeVertexNormals();
-        var square = new THREE.Mesh(polygonGeometry, wireframeMaterial);
-        square.position.set(-2, 2, 0);
-        square.rotation.set(0, -Math.PI/2, 0);
-        square.scale.set(1, 1, 1);
-        //scene.add(square);
+        	    return new THREE.Vector3(x, y, z);
+        	};
 
-        var lineGeometry = new THREE.Geometry();
-        lineGeometry.vertices.push(polygonGeometry.vertices[0]);
-        //lineGeometry.vertices.push(new THREE.Vector3(, , ));
-        //lineGeometry.vertices.push(new THREE.Vector3(, , ));
+        	var sphereGeometry = new THREE.ParametricGeometry(sphereFunc, 10, 300);
+        	sphereGeometry.computeVertexNormals();
+        	var sphereMaterial = new THREE.MeshLambertMaterial({color: 0x777777, side: THREE.DoubleSide});
+        	var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        	var sphere2 = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        	sphere.rotation.set(-Math.PI / 2.0, 0.0, 0.0);
+        	sphere2.rotation.set(-Math.PI / 2.0, 0.0, 0.0);
+        	scene.add(sphere);
+ 
+         	var square = new THREE.Mesh(polygonGeometry, basicMaterial.material);
+        	square.position.set(-2, 2, 0);
+        	square.rotation.set(0, -Math.PI/2, 0);
+        	scene.add(square);
+        	square.updateMatrixWorld();
 
-        var square2 = new THREE.Mesh(polygonGeometry, basicMaterial.material);
-        square2.position.set(-2, 2, 0);
-        square2.rotation.set(0, -Math.PI/2, 0);
-        square2.scale.set(1, 1, 1);
-        scene.add(square2);
+        	var square2 = new THREE.Mesh(polygonGeometry, transformedMaterial.material);
+        	square2.position.set(-2, 2, 0);
+        	square2.rotation.set(0, -Math.PI/2, 0);
+        	scene.add(square2);
+        	square2.updateMatrixWorld();
 
+        	var lineGeometry = new THREE.Geometry();
+        	lineGeometry.vertices.push((new THREE.Vector3(0, 0, 0)).applyMatrix4(square.matrixWorld));
+        	lineGeometry.vertices.push(new THREE.Vector3(0,0,0));
+        	lineGeometry.vertices.push((new THREE.Vector3(0, 1, 0)).applyMatrix4(square.matrixWorld));
+        	lineGeometry.vertices.push(new THREE.Vector3(0,0,0));
+        	lineGeometry.vertices.push((new THREE.Vector3(1, 0, 0)).applyMatrix4(square.matrixWorld));
+        	lineGeometry.vertices.push(new THREE.Vector3(0,0,0));
+        	lineGeometry.vertices.push((new THREE.Vector3(1,1,0)).applyMatrix4(square.matrixWorld));
+        	lineGeometry.vertices.push(new THREE.Vector3(0,0,0));
+        	var lines = new THREE.LineSegments(lineGeometry, basicMaterial.material);
+        	scene.add(lines);
+        
         function updateScene()
         {
         }
@@ -131,7 +167,7 @@
             requestAnimationFrame(render);
             controls.update();
             updateScene();
-            renderer.render(scene, camera);
+			renderer.render(scene, camera);
         }
 
         function onWindowResize(event) {
@@ -140,36 +176,37 @@
             renderer.setSize(window.innerWidth, window.innderHeight);
         }
 
-        function resetDefaults() {
-            square2.material.uniforms["roughness"] = {type: 'f', value: 0.83 };
-            square2.material.uniforms["theta"] = {type: 'f', value: 0.0 };
-            square2.material.uniforms["norm"] = {type: 'f', value: 0.0 };
-        }
-
+        var prev;
         function setupGUI() {
             var gui = new dat.GUI({
                 height: 5 * 32 - 1
             });
 
             var params = {
+                brdf: 0,
                 roughness: 0.83,
-                theta: 0.0,
+                theta: 0.001,
                 normalize: false, 
                 reset: function() {
                     resetDefaults();
                 }
             }
 
+            gui.add(params, 'brdf', brdfTypes).onChange(function(b) {
+                basicMaterial.material.uniforms["ltc_Minv"] = {type: 't', value: brdfList[b].mat };
+                basicMaterial.material.uniforms["ltc_Amp"] = {type: 't', value: brdfList[b].amp };
+                transformedMaterial.material.uniforms["ltc_Minv"] = {type: 't', value: brdfList[b].mat };
+                transformedMaterial.material.uniforms["ltc_Amp"] = {type: 't', value: brdfList[b].amp };
+            });
+
             gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
+                square.material.uniforms["roughness"] = {type: 'f', value: r };
                 square2.material.uniforms["roughness"] = {type: 'f', value: r };
             });
 
-            gui.add(params, "theta", 0.0, Math.PI / 2.0).onChange(function(t) {
+            gui.add(params, "theta", 0.0, (Math.PI / 2.0)).onChange(function(t) {
+                square.material.uniforms["theta"] = {type: 'f', value: t };
                 square2.material.uniforms["theta"] = {type: 'f', value: t };
-            });
-
-            gui.add(params, "normalize", 0.0, 1.0).onChange(function(n) {
-                square2.material.uniforms["norm"] = {type: 'f', value: (n) ? 1.0 : 0.0 };
             });
         }
 
