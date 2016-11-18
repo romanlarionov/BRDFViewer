@@ -7,7 +7,7 @@
             body {
 				color: #000;
 				font-family:Monospace;
-				font-size:20px;
+				font-size:30px;
 				text-align:center;
 
 				background-color: #fff;
@@ -31,6 +31,8 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
     <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
 	<script src="../assets/ltc_ggx.js" type="text/javascript"></script>
+	<script src="../assets/ltc_beckmann.js" type="text/javascript"></script>
+	<script src="../assets/ltc_disney_diffuse.js" type="text/javascript"></script>
     <script src='../lib/DAT.GUI.min.js' type='text/javascript'></script>
 	<script src="../src/js/model.js" type="text/javascript"></script>
 	<script src="../src/js/shader.js" type="text/javascript"></script>
@@ -43,15 +45,13 @@
         var clock = new THREE.Clock();
         var deltaTime;
         
-        var ambient = new THREE.AmbientLight(0xFFFFFF);
-		scene.add(ambient);
-        scene.fog = new THREE.Fog( 0x000000, 1500, 4000 );
+		scene.add(new THREE.AmbientLight(0xFFFFFF));
+        scene.background = new THREE.Color(0x3C5C67);
 
         var renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         window.addEventListener("resize", onWindowResize, false);
         document.body.appendChild(renderer.domElement);
-        scene.background = new THREE.Color(0x3C5C67);
 
         // User Input
         var controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -63,7 +63,7 @@
         var gridHelper = new THREE.GridHelper(25, 50, 0x60F4E1, 0xE7EDEC);
         scene.add(gridHelper);
 
-                var sphereFunc = function(u, v) {
+        var sphereFunc = function(u, v) {
             var phi = v * 2 * Math.PI ;
             var theta = u * Math.PI;
 
@@ -84,56 +84,54 @@
             shading_intensity : {type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5)},
             shading_color : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)},
             roughness : {type: 'f', value: 0.3 },
-            phi : {type: 'f', value: 0.0 },
             theta : {type: 'f', value: Math.PI / 4},
             F0 : {type: 'f', value: 0.1 },
             plotLog : {type: 'f', value: 0.0 }
         };
 
-        var GGXSmithMaterial      = new Shader("GGXSmith", "basic", basicUniforms);
+        var GGXMaterial           = new Shader("GGX", "basic", basicUniforms);
         var BeckmannMaterial      = new Shader("Beckmann", "basic", basicUniforms);
         var DisneyDiffuseMaterial = new Shader("DisneyDiffuse", "basic", basicUniforms);
-        var PhongMaterial         = new Shader("Phong", "basic", basicUniforms);
-        var BlinnPhongMaterial    = new Shader("BlinnPhong", "basic", basicUniforms);
 
-        var GGXSmithSphere      = new THREE.Mesh(sphereGeometry, GGXSmithMaterial.material);
+        var GGXSphere           = new THREE.Mesh(sphereGeometry, GGXMaterial.material);
         var BeckmannSphere      = new THREE.Mesh(sphereGeometry, BeckmannMaterial.material);
         var DisneyDiffuseSphere = new THREE.Mesh(sphereGeometry, DisneyDiffuseMaterial.material);
-        var PhongSphere         = new THREE.Mesh(sphereGeometry, PhongMaterial.material);
-        var BlinnPhongSphere    = new THREE.Mesh(sphereGeometry, BlinnPhongMaterial.material);
-        scene.add(GGXSmithSphere);
+        scene.add(GGXSphere);
 
-        // todo: remove ltc stuff
-        var ltc_mat_data = new Float32Array(g_ggx_Minv);
-        var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.RGBAFormat, THREE.FloatType);
-        ltc_mat_tex.minFilter = THREE.NearestFilter;
-        ltc_mat_tex.magFilter = THREE.LinearFilter;
-        ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
-        ltc_mat_tex.wrapT = THREE.ClampToEdgeWrapping;
-        ltc_mat_tex.needsUpdate = true;
+        var storeTransformationTexture = function(ltc_mat, ltc_amp) {
 
-        var ltc_amp_data = new Float32Array(g_ggx_Mag);
-        var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.AlphaFormat, THREE.FloatType);
-        ltc_amp_tex.minFilter = THREE.NearestFilter;
-        ltc_amp_tex.magFilter = THREE.LinearFilter;
-        ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
-        ltc_amp_tex.wrapT = THREE.ClampToEdgeWrapping;
-        ltc_amp_tex.needsUpdate = true;
+        	var ltc_mat_data = new Float32Array(ltc_mat);
+        	var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 64, THREE.RGBAFormat, THREE.FloatType);
+        	ltc_mat_tex.minFilter = THREE.NearestFilter;
+        	ltc_mat_tex.magFilter = THREE.LinearFilter;
+        	ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
+        	ltc_mat_tex.wrapT = THREE.ClampToEdgeWrapping;
+        	ltc_mat_tex.needsUpdate = true;
 
-        var ltcMaterial = new Shader("ltc", "basic", {
-            shading_light : {type: 'v3', value: new THREE.Vector3(5.0, 20.0, 20.0)},
-            shading_intensity : {type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5)},
-            shading_color : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)},
-            roughness : {type: 'f', value: 0.3 },
-            theta : {type: 'f', value: Math.PI / 4},
-            F0 : {type: 'f', value: 0.1 },
-            plotLog : {type: 'f', value: 0.0 },
-            ltc_Minv : {type: 't', value: ltc_mat_tex },
-            ltc_Amp : {type: 't', value: ltc_amp_tex }
-        });
+        	var ltc_amp_data = new Float32Array(ltc_amp);
+        	var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 64, THREE.AlphaFormat, THREE.FloatType);
+        	ltc_amp_tex.minFilter = THREE.NearestFilter;
+        	ltc_amp_tex.magFilter = THREE.LinearFilter;
+        	ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
+        	ltc_amp_tex.wrapT = THREE.ClampToEdgeWrapping;
+        	ltc_amp_tex.needsUpdate = true;
 
+            return {"mat": ltc_mat_tex, "amp": ltc_amp_tex};
+        }
+
+        var brdfTypes = { GGX: 0, Beckmann: 1, DisneyDiffuse: 2};
+        var brdfList = [GGXSphere, BeckmannSphere, DisneyDiffuseSphere];
+        var ltcDataList = [
+            storeTransformationTexture(g_ggx_Minv, g_ggx_Mag),
+            storeTransformationTexture(g_beckmann_Minv, g_beckmann_Mag),
+            storeTransformationTexture(g_disney_diffuse_Minv, g_disney_diffuse_Mag)
+        ];
+
+        var ltcUniforms = JSON.parse(JSON.stringify(basicUniforms));
+        ltcUniforms.ltc_Minv = {type: "t", value: ltcDataList[0].mat}
+        ltcUniforms.ltc_Amp  = {type: "t", value: ltcDataList[0].amp}
+        var ltcMaterial = new Shader("ltc", "basic", ltcUniforms);
         var sphereLTC = new THREE.Mesh(sphereGeometry, ltcMaterial.material);
-        //scene.add(sphereLTC);
 
         function updateScene()
         {
@@ -153,16 +151,16 @@
             renderer.setSize(window.innerWidth, window.innderHeight);
         }
 
-        var prev;
-        var displayedObject = prev;
-        var hangingObject = sphereLTC;
+        var prev = GGXSphere;
+        var displayedObject = "analytic";
+        var hangingObject = "ltc";
         function setupGUI() {
-            var brdfTypes = { GGXSmith: 0, Beckmann: 1, DisneyDiffuse: 2, Phong: 3, BlinnPhong: 4};
-            var brdfList = [GGXSmithSphere, BeckmannSphere, DisneyDiffuseSphere, PhongSphere, BlinnPhongSphere];
-
-            var updateUniforms = function(param, obj) {
+           
+            var updateUniforms = function(param, obj, ltcOnly) {
                 for (var i = 0; i < brdfList.length; i++) {
-                    brdfList[i].material.uniforms[param] = obj;
+                    if (!ltcOnly) {
+                        brdfList[i].material.uniforms[param] = obj;
+                    }
                     sphereLTC.material.uniforms[param] = obj;
                 }
             };
@@ -177,8 +175,14 @@
                 F0: 0.1,
                 plotLog: false,
                 switchPlots: function() {
-                    scene.remove(displayedObject);
-                    scene.add(hangingObject);
+                    if (displayedObject === "analytic") {
+                        scene.remove(prev);
+                        scene.add(sphereLTC);
+                    } else {
+                        scene.remove(sphereLTC);
+                        scene.add(prev);
+                    }
+
                     var temp = displayedObject;
                     displayedObject = hangingObject;
                     hangingObject = temp;
@@ -186,9 +190,14 @@
             }
 
             gui.add(params, 'brdf', brdfTypes).onChange(function(b) {
-                scene.remove(brdfList[prev]);
-                scene.add(brdfList[b]);
-                prev = b;
+                if (displayedObject === "analytic") {
+                    scene.remove(prev);
+                    prev = brdfList[b];
+                    scene.add(prev);
+                }
+
+                updateUniforms("ltc_Minv", {type: 't', value: ltcDataList[b].mat}, true);
+                updateUniforms("ltc_Amp", {type: 't', value: ltcDataList[b].amp}, true);
             });
 
             gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {

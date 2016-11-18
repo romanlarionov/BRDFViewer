@@ -7,23 +7,18 @@ precision mediump int;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
-uniform mat3 normalMatrix;
 
 uniform float roughness; // sqrt(alpha)
 uniform float phi;
 uniform float theta;
 uniform float F0;
-
 uniform float plotLog;
 
 attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 uv;
 
 uniform vec3 shading_light;
 
 varying vec3 P;
-varying vec3 N;
 varying vec3 L;
 
 float GGX_NDF(float roughness4, float NdotH)
@@ -61,9 +56,8 @@ void main()
     mat3 rotation = mat3(v0, v1, v2);
 
     vec3 w_position = vec3(modelMatrix * vec4(position, 0.0));
-    vec3 w_normal   = vec3(0.0, 0.0, 1.0);
-    vec3 view       = normalize(w_position);
-    vec3 light_dir  = normalize(vec3(sin(theta), 0.0, cos(theta)));
+    vec3 view       = normalize(vec3(sin(theta), 0.0, cos(theta)));
+    vec3 light_dir  = normalize(w_position);
     vec3 halfway    = normalize(light_dir + view);
 
     float NdotL = max(light_dir.z, 0.0);
@@ -82,12 +76,11 @@ void main()
 
     brdf = (plotLog > 0.5) ? moveToLogSpace(brdf) : brdf;
 
-    w_position = rotation * view * NdotV * brdf;
+    w_position = rotation * light_dir * NdotL * brdf;
 
     // Used for actual shading
     gl_Position = projectionMatrix * viewMatrix * vec4(w_position, 1.0);
 
-    N = normalMatrix * normal;
     P = vec3(viewMatrix * vec4(w_position, 1.0));
     L = vec3(viewMatrix * vec4(shading_light, 1.0));
 }
