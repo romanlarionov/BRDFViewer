@@ -119,7 +119,7 @@
             return {"mat": ltc_mat_tex, "amp": ltc_amp_tex};
         }
 
-        var brdfTypes = { GGX: 0, Beckmann: 1, DisneyDiffuse: 2};
+        var brdfTypes = { GGX: 0, Beckmann: 1};//, DisneyDiffuse: 2};
         var brdfList = [GGXSphere, BeckmannSphere, DisneyDiffuseSphere];
         var ltcDataList = [
             storeTransformationTexture(g_ggx_Minv, g_ggx_Mag),
@@ -178,9 +178,11 @@
                     if (displayedObject === "analytic") {
                         scene.remove(prev);
                         scene.add(sphereLTC);
+                        $("#info").html("LTC Viewer");
                     } else {
                         scene.remove(sphereLTC);
                         scene.add(prev);
+                        $("#info").html("BRDF Viewer");
                     }
 
                     var temp = displayedObject;

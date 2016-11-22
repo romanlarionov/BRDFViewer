@@ -7,38 +7,43 @@ precision mediump int;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
-uniform mat3 normalMatrix;
 
 uniform float roughness; // sqrt(alpha)
 uniform float phi;
 uniform float theta;
 uniform float F0;
-
 uniform float plotLog;
 
 attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 uv;
 
 uniform vec3 shading_light;
 
 varying vec3 P;
-varying vec3 N;
 varying vec3 L;
 
-float GGX_NDF(float roughness4, float NdotH)
+float GGX_NDF(float roughness4, vec3 H)
 {
-    float b = NdotH * NdotH * (roughness4 - 1.0) + 1.0;
-    return roughness4 / (M_PI * b * b);
+    float dx = H.x / H.z;
+    float dy = H.y / H.z;
+    float tanHalfway = dx * dx + dy * dy;
+    float D = 1.0 / (1.0 + tanHalfway / roughness4);
+    return (D * D) / (M_PI * roughness4 * H.z * H.z * H.z * H.z);
 }
 
 // http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-float Smith_Shadowing_Masking(float NdotV, float NdotL)
+float Schlick_Shadowing_Masking(float NdotV, float NdotL)
 {
     float k = ((roughness + 1.0) * (roughness + 1.0)) / 8.0;
     float shadowing = NdotV / (NdotV * (1.0 - k) + k);
     float masking = NdotL / (NdotL * (1.0 - k) + k);
     return shadowing * masking;
+}
+
+float Smith_Shadowing_Masking(float roughness, float NdotX)
+{
+    float a = 1.0 / (roughness * roughness * tan(acos(NdotX)));
+    float G = 0.5 * (-1.0 + sqrt(1.0 + (1.0 / a / a)));
+    return 1.0 / (1.0 + G);
 }
 
 float SchlickFresnel(float VdotH, float F0)
@@ -61,9 +66,8 @@ void main()
     mat3 rotation = mat3(v0, v1, v2);
 
     vec3 w_position = vec3(modelMatrix * vec4(position, 0.0));
-    vec3 w_normal   = vec3(0.0, 0.0, 1.0);
-    vec3 view       = normalize(w_position);
-    vec3 light_dir  = normalize(vec3(sin(theta), 0.0, cos(theta)));
+    vec3 view       = vec3(sin(theta), 0.0, cos(theta));
+    vec3 light_dir  = normalize(w_position);
     vec3 halfway    = normalize(light_dir + view);
 
     float NdotL = max(light_dir.z, 0.0);
@@ -74,20 +78,19 @@ void main()
     float roughness4 = roughness * roughness * roughness * roughness;
 
     float brdf = 1.0;
-
     brdf /= 4.0 * NdotL * NdotV;
-    brdf *= GGX_NDF(roughness4, NdotH);
-    brdf *= Smith_Shadowing_Masking(NdotV, NdotL);
+    brdf *= GGX_NDF(roughness4, halfway);
+    brdf *= Smith_Shadowing_Masking(roughness, NdotL);
+    brdf *= Smith_Shadowing_Masking(roughness, NdotV);
     brdf *= SchlickFresnel(VdotH, F0);
 
     brdf = (plotLog > 0.5) ? moveToLogSpace(brdf) : brdf;
 
-    w_position = rotation * view * NdotV * brdf;
+    w_position = rotation * light_dir * NdotL * brdf;
 
     // Used for actual shading
     gl_Position = projectionMatrix * viewMatrix * vec4(w_position, 1.0);
 
-    N = normalMatrix * normal;
     P = vec3(viewMatrix * vec4(w_position, 1.0));
     L = vec3(viewMatrix * vec4(shading_light, 1.0));
 }

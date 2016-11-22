@@ -79,7 +79,7 @@ void main()
     float detM = 1.0 / detMinv;
     float jacobian = detM / (norm * norm * norm);
     float D = (1.0 / M_PI) * max(sample_original.z, 0.0);
-    float result =  D / jacobian;
+    float result = amp * D / jacobian;
 
     result = (plotLog > 0.5) ? moveToLogSpace(result) : result;
 
@@ -88,7 +88,7 @@ void main()
     float NdotL     = max(sample_transformed_n.z, 0.0);
     float fresnel   = SchlickFresnel(VdotH, F0);
 
-    vec3 t_position = rotation * sample_transformed * result * NdotL;// * fresnel;
+    vec3 t_position = rotation * sample_transformed * result * fresnel * NdotL / NdotL;
 
     // Used for actual shading
     gl_Position = projectionMatrix * viewMatrix * vec4(t_position, 1.0);
