@@ -5,10 +5,12 @@ BRDF and Linearly Transformed Cosines Visualizer
 This code base is has several demos which help to visually understand several BRDF lobes as well as LTC transformations.
 
 tree structure:
-demos
+```
+demos>
 |- BRDFViewer.html - 
 |- MERL_AreaLight.html
 |- TransformationViewer.html
+```
 
 ###BRDFViewer
 
@@ -16,7 +18,7 @@ Dynamically switch between analytic and fitted lobes with the 'switchPlots' butt
 
 ###MERL_AreaLight
 
-Running code demo of a simple sphere primitive lite by an area light using linearly transformed cosines. This particular demo uses a modified version of the LTC LUT, which has been fitted to use MERL emperical BRDF data. The dimensionality of the LUT is 64x3 (theta, color channel). Code for generating and exporting such textures can be found here: https://github.com/romanlarionov/LTC_Fitting/tree/merl.
+Running code demo of a simple sphere primitive lit by an area light using linearly transformed cosines. This particular demo uses a modified version of the LTC LUT, which has been fitted to use MERL emperical BRDF data. The dimensionality of the LUT is 64x3 (theta, color channel). Code for generating and exporting such textures can be found here: https://github.com/romanlarionov/LTC_Fitting/tree/merl.
 
 ###TransformationViewer
 
