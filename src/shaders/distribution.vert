@@ -51,7 +51,7 @@ void main()
     vec3 view       = vec3(sin(theta), 0.0, cos(theta));
 
     vec2 uv = vec2(roughness, theta / 1.570795);
-    uv = uv * LUT_SCALE + LUT_BIAS; // used in sample demo
+    //uv = uv * LUT_SCALE + LUT_BIAS; // used in sample demo
     vec4 t = texture2D(ltc_Minv, uv);
     float amp = texture2D(ltc_Amp, uv).w;
 
@@ -70,16 +70,16 @@ void main()
     mat3 Minv = mat3(n0, n1, n2);
 
     // all below: refer to https://github.com/romanlarionov/LTC_Fitting/blob/master/LTC.h
-    vec3 sample_transformed_n = normalize(M * light_dir);
-    vec3 sample_original = normalize(Minv * sample_transformed_n);
+    vec3 sample_original = light_dir;//normalize(Minv * sample_transformed_n);
     vec3 sample_transformed = M * sample_original;
+    vec3 sample_transformed_n = normalize(sample_transformed);
 
     float norm = length(sample_transformed);
     float detMinv = t.z * q;
     float detM = 1.0 / detMinv;
     float jacobian = detM / (norm * norm * norm);
     float D = (1.0 / M_PI) * max(sample_original.z, 0.0);
-    float result = amp * D / jacobian;
+    float result = D / jacobian / amp;
 
     result = (plotLog > 0.5) ? moveToLogSpace(result) : result;
 
@@ -88,7 +88,8 @@ void main()
     float NdotL     = max(sample_transformed_n.z, 0.0);
     float fresnel   = SchlickFresnel(VdotH, F0);
 
-    vec3 t_position = rotation * sample_transformed * result * fresnel * NdotL / NdotL;
+    float scale =  NdotL * view.z / roughness / roughness;
+    vec3 t_position = rotation * normalize(sample_transformed * NdotL / scale) * result * fresnel;
 
     // Used for actual shading
     gl_Position = projectionMatrix * viewMatrix * vec4(t_position, 1.0);

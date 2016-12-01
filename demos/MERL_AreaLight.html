@@ -3,7 +3,7 @@
 	<head>
 		<meta charset=utf-8>
 		<title>MERL Area Light Renderer</title>
-        <style>
+        <style> 
             body {
 				color: #000;
 				font-family:Monospace;
@@ -98,7 +98,7 @@
         var storeTransformationTexture = function(ltc_mat, ltc_amp) {
 
         	var ltc_mat_data = new Float32Array(ltc_mat);
-        	var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 3, 64, THREE.RGBAFormat, THREE.FloatType);
+        	var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 64, 3, THREE.RGBAFormat, THREE.FloatType);
         	ltc_mat_tex.minFilter = THREE.NearestFilter;
         	ltc_mat_tex.magFilter = THREE.LinearFilter;
         	ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -106,7 +106,7 @@
         	ltc_mat_tex.needsUpdate = true;
 
         	var ltc_amp_data = new Float32Array(ltc_amp);
-        	var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 3, 64, THREE.AlphaFormat, THREE.FloatType);
+        	var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 64, 3, THREE.AlphaFormat, THREE.FloatType);
         	ltc_amp_tex.minFilter = THREE.NearestFilter;
         	ltc_amp_tex.magFilter = THREE.LinearFilter;
         	ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -122,14 +122,15 @@
             ltc_Minv: {type: 't', value: ltcTex.mat},
             ltc_Amp: {type: 't', value: ltcTex.amp},
             w_light_corners: {type: 'v3v', value: light_world_space_corners},
-            intensity: {type: 'v3', value: new THREE.Vector3(1.0, 1.0, 1.0)}
-            //normalFresnel: {type: 'v3', value: }
+            intensity: {type: 'v3', value: new THREE.Vector3(3.0, 3.0, 3.0)},
+            normalFresnel: {type: 'v3', value: new THREE.Vector4(0.91, 0.92, 0.92)}
         };
 
         var radius = 2;
-        var vertSubdivisions = 50;
-        var horiSubdivisions = 50;
+        var vertSubdivisions = 500;
+        var horiSubdivisions = 500;
         var sphereGeometry = new THREE.SphereGeometry(radius, vertSubdivisions, horiSubdivisions);
+        sphereGeometry.computeVertexNormals();
         var brassShader = new Shader("ltc", "ltc", basicUniforms);
         
         var sphere = new THREE.Mesh(sphereGeometry, brassShader.material);
