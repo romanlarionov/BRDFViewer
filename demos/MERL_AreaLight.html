@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>MERL Area Light Renderer</title>
+        <style>
+            body {
+				color: #000;
+				font-family:Monospace;
+				font-size:30px;
+				text-align:center;
+
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			canvas { width: 100%; height: 100% }
+            #info {
+                position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+            }
+		</style>
+	</head>
+	<body>
+
+    <div id="container"></div>
+	<div id="info">MERL-Based LTC Area Light Example</div>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
+    <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="../assets/ltc_merl_brass.js" type="text/javascript"></script>
+    <script src='../lib/DAT.GUI.min.js' type='text/javascript'></script>
+	<script src="../src/js/model.js" type="text/javascript"></script>
+	<script src="../src/js/shader.js" type="text/javascript"></script>
+    <script>
+        // Set up three.js render context
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0.0, 0.0, 5.0);
+        var cameraSpeed = 10;
+        var clock = new THREE.Clock();
+        var deltaTime;
+        
+		scene.add(new THREE.AmbientLight(0xFFFFFF));
+        scene.background = new THREE.Color(0x000000);
+
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        window.addEventListener("resize", onWindowResize, false);
+        document.body.appendChild(renderer.domElement);
+
+        // User Input
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		controls.enableDamping = true;
+		controls.dampingFactor = 0.25;
+		controls.enableZoom = false;
+
+        // Scene objects
+        var square = new THREE.Geometry();
+        square.vertices.push(new THREE.Vector3(-1, -1, 0));
+        square.vertices.push(new THREE.Vector3(1, -1, 0));
+        square.vertices.push(new THREE.Vector3(1, 1, 0));
+        square.vertices.push(new THREE.Vector3(1, 1, 0));
+        square.vertices.push(new THREE.Vector3(-1, 1, 0));
+        square.vertices.push(new THREE.Vector3(-1, -1, 0));
+        square.faces.push(new THREE.Face3(0, 1, 2));
+        square.faces.push(new THREE.Face3(2, 4, 0));
+        square.computeVertexNormals();
+
+	    var lightMaterial = new THREE.MeshLambertMaterial({color: 0xffffff, side: THREE.DoubleSide});
+	    var groundMaterial = new THREE.MeshLambertMaterial({color: 0x4d5356, side: THREE.DoubleSide});
+
+        var ground = new THREE.Mesh(square, groundMaterial);
+        ground.scale.set(10, 10, 1);
+        ground.position.set(-20, -5, -25);
+        ground.rotation.x += Math.PI / 2;
+	    ground.updateMatrixWorld();
+        
+        var light = new THREE.Mesh(square, lightMaterial);
+        light.position.set(2, 2, -2);
+        //light.rotation.z += Math.PI / 4;
+	    light.updateMatrixWorld();
+
+        scene.add(ground);
+        scene.add(light);
+
+        var light_world_space_corners = light.geometry.vertices.map(function(e) {
+            var temp = e.applyMatrix4(light.matrixWorld);
+            return temp;
+        });
+
+        //todo: check
+        light_world_space_corners.splice(3, 1); // remove duplicate corners
+        light_world_space_corners.splice(4, 1);
+
+        var storeTransformationTexture = function(ltc_mat, ltc_amp) {
+
+        	var ltc_mat_data = new Float32Array(ltc_mat);
+        	var ltc_mat_tex = new THREE.DataTexture(ltc_mat_data, 3, 64, THREE.RGBAFormat, THREE.FloatType);
+        	ltc_mat_tex.minFilter = THREE.NearestFilter;
+        	ltc_mat_tex.magFilter = THREE.LinearFilter;
+        	ltc_mat_tex.wrapS = THREE.ClampToEdgeWrapping;
+        	ltc_mat_tex.wrapT = THREE.ClampToEdgeWrapping;
+        	ltc_mat_tex.needsUpdate = true;
+
+        	var ltc_amp_data = new Float32Array(ltc_amp);
+        	var ltc_amp_tex = new THREE.DataTexture(ltc_amp_data, 3, 64, THREE.AlphaFormat, THREE.FloatType);
+        	ltc_amp_tex.minFilter = THREE.NearestFilter;
+        	ltc_amp_tex.magFilter = THREE.LinearFilter;
+        	ltc_amp_tex.wrapS = THREE.ClampToEdgeWrapping;
+        	ltc_amp_tex.wrapT = THREE.ClampToEdgeWrapping;
+        	ltc_amp_tex.needsUpdate = true;
+
+            return {"mat": ltc_mat_tex, "amp": ltc_amp_tex};
+        }
+
+        var ltcTex = storeTransformationTexture(g_merl_brass_Minv, g_merl_brass_Mag);
+
+        var basicUniforms = {
+            ltc_Minv: {type: 't', value: ltcTex.mat},
+            ltc_Amp: {type: 't', value: ltcTex.amp},
+            w_light_corners: {type: 'v3v', value: light_world_space_corners},
+            intensity: {type: 'v3', value: new THREE.Vector3(1.0, 1.0, 1.0)}
+            //normalFresnel: {type: 'v3', value: }
+        };
+
+        var radius = 2;
+        var vertSubdivisions = 50;
+        var horiSubdivisions = 50;
+        var sphereGeometry = new THREE.SphereGeometry(radius, vertSubdivisions, horiSubdivisions);
+        var brassShader = new Shader("ltc", "ltc", basicUniforms);
+        
+        var sphere = new THREE.Mesh(sphereGeometry, brassShader.material);
+        scene.add(sphere);
+
+        function updateScene()
+        {
+        }
+
+        // Render
+        function render() {
+            requestAnimationFrame(render);
+            controls.update();
+            updateScene();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize(event) {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innderHeight);
+        }
+        render();
+	</script>
+	</body>
+</html>

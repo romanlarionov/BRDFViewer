@@ -130,7 +130,7 @@
         var ltcUniforms = JSON.parse(JSON.stringify(basicUniforms));
         ltcUniforms.ltc_Minv = {type: "t", value: ltcDataList[0].mat}
         ltcUniforms.ltc_Amp  = {type: "t", value: ltcDataList[0].amp}
-        var ltcMaterial = new Shader("ltc", "basic", ltcUniforms);
+        var ltcMaterial = new Shader("distribution", "basic", ltcUniforms);
         var sphereLTC = new THREE.Mesh(sphereGeometry, ltcMaterial.material);
 
         function updateScene()
