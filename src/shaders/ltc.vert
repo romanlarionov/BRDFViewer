@@ -5,19 +5,17 @@ precision mediump int;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
-uniform mat3 normalMatrix;
 
 attribute vec3 position;
 attribute vec3 normal;
 
-varying vec3 c_P;
-varying vec3 c_N;
-varying mat4 viewMat;
+varying vec3 w_P;
+varying vec3 w_N;
 
 void main()
 {
-    c_P = vec3(viewMatrix * modelMatrix * vec4(position, 1.0));
-    c_N = normalMatrix * normal;
-    viewMat = viewMatrix;
-    gl_Position = projectionMatrix * vec4(c_P, 1.0);
+    w_P = vec3( modelMatrix * vec4(position, 1.0));
+    w_N = normal * 2.0 - 1.0;
+    w_N = vec3(modelMatrix * vec4(w_N, 0.0));
+    gl_Position = projectionMatrix * viewMatrix * vec4(w_P, 1.0);
 }

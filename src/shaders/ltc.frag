@@ -4,19 +4,15 @@
 precision mediump float;
 precision mediump int;
 
-const float LUT_SIZE  = 64.0;
-const float LUT_SCALE = (LUT_SIZE - 1.0)/LUT_SIZE;
-const float LUT_BIAS  = 0.5/LUT_SIZE;
-
 uniform sampler2D ltc_Minv;
 uniform sampler2D ltc_Amp;
 uniform vec3 w_light_corners[4];
 uniform vec3 intensity;
 uniform vec3 normalFresnel;
+uniform vec3 camera_position;
 
-varying vec3 c_P;
-varying vec3 c_N;
-varying mat4 viewMat;
+varying vec3 w_P;
+varying vec3 w_N;
 
 mat3 transpose(mat3 v)
 {
@@ -31,7 +27,7 @@ mat3 transpose(mat3 v)
 float contourIntegral(vec3 p1, vec3 p2)
 {
     float theta = acos(dot(p1, p2));
-    return -cross(p1, p2).z * ((theta > 0.001) ? theta/sin(theta) : 1.0);
+    return cross(p1, p2).z * ((theta > 0.001) ? theta/sin(theta) : 1.0);
 }
 
 float LTC_Evaluate(vec3 normal, vec3 view, vec3 position, vec2 uv)
@@ -50,20 +46,12 @@ float LTC_Evaluate(vec3 normal, vec3 view, vec3 position, vec2 uv)
     mat3 TBN = mat3(tangent, bitangent, normal);
     Minv = Minv * transpose(TBN);
 
-    vec3 c_light_corners[4];
-    c_light_corners[0] = TBN * vec3(viewMat * vec4(w_light_corners[0], 1.0));
-    c_light_corners[1] = TBN * vec3(viewMat * vec4(w_light_corners[1], 1.0));
-    c_light_corners[2] = TBN * vec3(viewMat * vec4(w_light_corners[2], 1.0));
-    c_light_corners[3] = TBN * vec3(viewMat * vec4(w_light_corners[3], 1.0));
-
-    vec3 tbn_position = TBN * position;
-
     // Transform to fitted space and project onto unit hemisphere
     vec3 t_light_corners[4];
-    t_light_corners[0] = normalize(Minv * (c_light_corners[0] - tbn_position));
-    t_light_corners[1] = normalize(Minv * (c_light_corners[1] - tbn_position));
-    t_light_corners[2] = normalize(Minv * (c_light_corners[2] - tbn_position));
-    t_light_corners[3] = normalize(Minv * (c_light_corners[3] - tbn_position));
+    t_light_corners[0] = normalize(Minv * (w_light_corners[0] - position));
+    t_light_corners[1] = normalize(Minv * (w_light_corners[1] - position));
+    t_light_corners[2] = normalize(Minv * (w_light_corners[2] - position));
+    t_light_corners[3] = normalize(Minv * (w_light_corners[3] - position));
 
     float irradiance = 0.0;
     irradiance += contourIntegral(t_light_corners[0], t_light_corners[1]);
@@ -71,26 +59,24 @@ float LTC_Evaluate(vec3 normal, vec3 view, vec3 position, vec2 uv)
     irradiance += contourIntegral(t_light_corners[2], t_light_corners[3]);
     irradiance += contourIntegral(t_light_corners[3], t_light_corners[0]);
 
-    return abs(irradiance / (2.0 * M_PI));
+    return irradiance / (2.0 * M_PI);
 }
 
 void main()
 {
-    vec3 view = -normalize(vec3(c_P));
-    vec3 normal = normalize(c_N);
+    vec3 view = -normalize(vec3(w_P - camera_position));
+    vec3 normal = normalize(w_N);
 
     float theta = acos(dot(normal, view));
 
     vec2 r_uv = vec2(0.0, theta / (0.5 * M_PI));
-    vec2 g_uv = vec2(0.3, theta / (0.5 * M_PI));
-    vec2 b_uv = vec2(0.66, theta / (0.5 * M_PI));
+    vec2 g_uv = vec2(0.3333, theta / (0.5 * M_PI));
+    vec2 b_uv = vec2(0.6666, theta / (0.5 * M_PI));
 
-    float r_spec = LTC_Evaluate(normal, view, c_P, r_uv) * texture2D(ltc_Amp, r_uv).a;
-    float g_spec = LTC_Evaluate(normal, view, c_P, g_uv) * texture2D(ltc_Amp, g_uv).a;
-    float b_spec = LTC_Evaluate(normal, view, c_P, b_uv) * texture2D(ltc_Amp, b_uv).a;
+    float r_spec = LTC_Evaluate(normal, view, w_P, r_uv) * -texture2D(ltc_Amp, r_uv).a;
+    float g_spec = LTC_Evaluate(normal, view, w_P, g_uv) * texture2D(ltc_Amp, g_uv).a;
+    float b_spec = LTC_Evaluate(normal, view, w_P, b_uv) * texture2D(ltc_Amp, b_uv).a;
     vec3 specular = vec3(r_spec, g_spec, b_spec);
 
-    vec3 ambient = vec3(0.95, 0.64, 0.54);
-
-    gl_FragColor = vec4(0.66 * ambient + specular * intensity, 1.0);
+    gl_FragColor = vec4( specular * intensity, 1.0);
 }

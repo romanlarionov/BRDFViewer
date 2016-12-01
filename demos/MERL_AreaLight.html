@@ -69,18 +69,19 @@
         square.faces.push(new THREE.Face3(2, 4, 0));
         square.computeVertexNormals();
 
+        var square2 = square.clone();
+
 	    var lightMaterial = new THREE.MeshLambertMaterial({color: 0xffffff, side: THREE.DoubleSide});
 	    var groundMaterial = new THREE.MeshLambertMaterial({color: 0x4d5356, side: THREE.DoubleSide});
 
         var ground = new THREE.Mesh(square, groundMaterial);
         ground.scale.set(10, 10, 1);
-        ground.position.set(-20, -5, -25);
+        ground.position.set(0, -5, 0);
         ground.rotation.x += Math.PI / 2;
 	    ground.updateMatrixWorld();
         
-        var light = new THREE.Mesh(square, lightMaterial);
-        light.position.set(2, 2, -2);
-        //light.rotation.z += Math.PI / 4;
+        var light = new THREE.Mesh(square2, lightMaterial);
+        light.position.set(-2, 2, -2);
 	    light.updateMatrixWorld();
 
         scene.add(ground);
@@ -91,7 +92,6 @@
             return temp;
         });
 
-        //todo: check
         light_world_space_corners.splice(3, 1); // remove duplicate corners
         light_world_space_corners.splice(4, 1);
 
@@ -122,8 +122,9 @@
             ltc_Minv: {type: 't', value: ltcTex.mat},
             ltc_Amp: {type: 't', value: ltcTex.amp},
             w_light_corners: {type: 'v3v', value: light_world_space_corners},
-            intensity: {type: 'v3', value: new THREE.Vector3(3.0, 3.0, 3.0)},
-            normalFresnel: {type: 'v3', value: new THREE.Vector4(0.91, 0.92, 0.92)}
+            intensity: {type: 'v3', value: new THREE.Vector3(2.0, 2.0, 2.0)},
+            normalFresnel: {type: 'v3', value: new THREE.Vector4(0.91, 0.92, 0.92)},
+            camera_position: {type: 'v3', value: new THREE.Vector3(0.0, 0.0, 0.0)}
         };
 
         var radius = 2;
@@ -138,6 +139,7 @@
 
         function updateScene()
         {
+            sphere.material.uniforms["camera_position"] = {type: "v3", value: camera.position};
         }
 
         // Render
