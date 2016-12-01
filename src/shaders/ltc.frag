@@ -88,7 +88,7 @@ void main()
     float r_spec = LTC_Evaluate(normal, view, c_P, r_uv) * texture2D(ltc_Amp, r_uv).a;
     float g_spec = LTC_Evaluate(normal, view, c_P, g_uv) * texture2D(ltc_Amp, g_uv).a;
     float b_spec = LTC_Evaluate(normal, view, c_P, b_uv) * texture2D(ltc_Amp, b_uv).a;
-    vec3 specular = vec3(r_spec);
+    vec3 specular = vec3(r_spec, g_spec, b_spec);
 
     vec3 ambient = vec3(0.95, 0.64, 0.54);
 
