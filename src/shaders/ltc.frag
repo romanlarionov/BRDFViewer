@@ -81,14 +81,13 @@ void main()
 
     float theta = acos(dot(normal, view));
 
-    vec2 r_uv = vec2(0.0, theta / (0.5 * M_PI));// * LUT_SCALE + LUT_BIAS;
-    vec2 g_uv = vec2(0.3, theta / (0.5 * M_PI));// * LUT_SCALE + LUT_BIAS;
-    vec2 b_uv = vec2(0.66, theta / (0.5 * M_PI));// * LUT_SCALE + LUT_BIAS;
+    vec2 r_uv = vec2(0.0, theta / (0.5 * M_PI));
+    vec2 g_uv = vec2(0.3, theta / (0.5 * M_PI));
+    vec2 b_uv = vec2(0.66, theta / (0.5 * M_PI));
 
     float r_spec = LTC_Evaluate(normal, view, c_P, r_uv) * texture2D(ltc_Amp, r_uv).a;
     float g_spec = LTC_Evaluate(normal, view, c_P, g_uv) * texture2D(ltc_Amp, g_uv).a;
     float b_spec = LTC_Evaluate(normal, view, c_P, b_uv) * texture2D(ltc_Amp, b_uv).a;
-    //vec3 specular = vec3(r_spec, g_spec, b_spec);
     vec3 specular = vec3(r_spec);
 
     vec3 ambient = vec3(0.95, 0.64, 0.54);
