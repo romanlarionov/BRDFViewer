@@ -16,4 +16,4 @@ There are several other implementations of a BRDF viewer online. Most are either
 * [WebGL BRDF Explorer](https://depot.floored.com/brdf_explorer)
 * [BRDFLab](http://brdflab.sourceforge.net/)
 
-![alt text][viewer]
+![alt text][viewer.gif]
