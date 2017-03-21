@@ -39,10 +39,10 @@ float Schlick_Shadowing_Masking(float NdotV, float NdotL)
     return shadowing * masking;
 }
 
-float Smith_Shadowing_Masking(float roughness, float NdotX)
+float Smith_Shadowing_Masking(float roughness4, float NdotX)
 {
-    float a = 1.0 / (roughness * roughness * tan(acos(NdotX)));
-    float G = 0.5 * (-1.0 + sqrt(1.0 + (1.0 / a / a)));
+    float NdotX2 = NdotX * NdotX;
+    float G = 0.5 * (-1.0 + sqrt(1.0 + roughness4 * (1.0 - NdotX2) / NdotX));
     return 1.0 / (1.0 + G);
 }
 

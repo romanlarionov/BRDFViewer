@@ -2,14 +2,165 @@
 <html>
 	<head>
 		<meta charset=utf-8>
-		<style>
-			body { margin: 0; }
+		<title>Ideal Mirror Reflection Program</title>
+        <style>
+            body {
+				color: #000;
+				font-family:Monospace;
+				font-size:30px;
+				text-align:center;
+
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
 			canvas { width: 100%; height: 100% }
+            #info {
+                position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+            }
 		</style>
 	</head>
 	<body>
-		<!-- todo: change (make prettier -->
-		<a href="demos/BRDFViewer.html">BRDF Viewer</a>
-		<a href="demos/TransformationViewer.html">Transformation Viewer</a>
+
+    <div id="container"></div>
+	<div id="info">BRDF Viewer</div>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.min.js"></script>
+    <script src="lib/OrbitControls.js"></script>
+    <script src='lib/DAT.GUI.min.js' type='text/javascript'></script>
+	<script src="src/js/model.js" type="text/javascript"></script>
+	<script src="src/js/shader.js" type="text/javascript"></script>
+    <script>
+        // Set up three.js render context
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0.0, 5.0, 5.0);
+        var cameraSpeed = 10;
+        var clock = new THREE.Clock();
+        var deltaTime;
+        
+		scene.add(new THREE.AmbientLight(0xFFFFFF));
+        scene.background = new THREE.Color(0x3C5C67);
+
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        window.addEventListener("resize", onWindowResize, false);
+        document.body.appendChild(renderer.domElement);
+
+        // User Input
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		controls.enableDamping = true;
+		controls.dampingFactor = 0.25;
+		controls.enableZoom = false;
+
+        // Scene objects
+        var gridHelper = new THREE.GridHelper(25, 50, 0x60F4E1, 0xE7EDEC);
+        scene.add(gridHelper);
+
+        var sphereFunc = function(u, v) {
+            var phi = v * 2 * Math.PI ;
+            var theta = u * Math.PI;
+
+            var vert = new THREE.Vector3();
+            vert.x = Math.sin(phi) * Math.cos(theta);
+            vert.y = Math.sin(phi) * Math.sin(theta);
+            vert.z = Math.cos(phi);
+            return vert;
+        };
+
+        var vertSubdivisions = 500;
+        var horiSubdivisions = 500;
+        var sphereGeometry = new THREE.ParametricGeometry(sphereFunc, horiSubdivisions, vertSubdivisions);
+        sphereGeometry.computeVertexNormals();
+
+        var basicUniforms = {
+            shading_light : {type: 'v3', value: new THREE.Vector3(5.0, 20.0, 20.0)},
+            shading_intensity : {type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5)},
+            shading_color : {type: 'v3', value: new THREE.Vector3(0.2, 0.2, 1.0)},
+            roughness : {type: 'f', value: 0.3 },
+            theta : {type: 'f', value: Math.PI / 4},
+            F0 : {type: 'f', value: 0.1 },
+            plotLog : {type: 'f', value: 0.0 }
+        };
+
+        var GGXMaterial               = new Shader("GGX", "basic", basicUniforms);
+        var BeckmannMaterial          = new Shader("Beckmann", "basic", basicUniforms);
+        var SphericalGaussianMaterial = new Shader("SphericalGaussian", "basic", basicUniforms);
+
+        var GGXSphere               = new THREE.Mesh(sphereGeometry, GGXMaterial.material);
+        var BeckmannSphere          = new THREE.Mesh(sphereGeometry, BeckmannMaterial.material);
+        var SphericalGaussianSphere = new THREE.Mesh(sphereGeometry, SphericalGaussianMaterial.material);
+        scene.add(GGXSphere);
+
+        var brdfTypes = { GGX: 0, Beckmann: 1, SphericalGaussian : 2};
+        var brdfList = [ GGXSphere, BeckmannSphere, SphericalGaussianSphere ];
+        
+        function updateScene()
+        {
+        }
+
+        // Render
+        function render() {
+            requestAnimationFrame(render);
+            controls.update();
+            updateScene();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize(event) {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innderHeight);
+        }
+
+        var prev = GGXSphere;
+        function setupGUI() {
+           
+            var updateUniforms = function(param, obj) {
+                for (var i = 0; i < brdfList.length; i++) {
+                    brdfList[i].material.uniforms[param] = obj;
+                }
+            };
+
+            var gui = new dat.GUI({ height: 5 * 32 - 1 });
+
+            var params = {
+                brdf: 0,
+                roughness: 0.3,
+                phi: 2 * Math.PI,
+                theta: Math.PI / 4.0,
+                F0: 0.1,
+                plotLog: false
+            }
+
+            gui.add(params, 'brdf', brdfTypes).onChange(function(b) {
+                scene.remove(prev);
+                prev = brdfList[b];
+                scene.add(prev);
+            });
+
+            gui.add(params, "roughness", 0.0, 1.0).onChange(function(r) {
+                updateUniforms("roughness", {type: 'f', value: r });
+            });
+
+            gui.add(params, "theta", 0.0, Math.PI / 2.0).onChange(function(t) {
+                updateUniforms("theta", {type: 'f', value: t });
+            });
+
+            gui.add(params, "F0", 0.0, Math.PI / 2.0).onChange(function(f) {
+                updateUniforms("F0", {type: 'f', value: f });
+            });
+
+            gui.add(params, "plotLog").onChange(function(p) {
+                updateUniforms("plotLog", {type: 'f', value: ( (p) ? 1.0 : 0.0) });
+            });
+        }
+
+        setupGUI();
+        render();
+	</script>
 	</body>
 </html>

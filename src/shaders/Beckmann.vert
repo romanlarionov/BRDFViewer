@@ -21,12 +21,6 @@ uniform vec3 shading_light;
 varying vec3 P;
 varying vec3 L;
 
-float GGX_NDF(float roughness4, float NdotH)
-{
-    float b = NdotH * NdotH * (roughness4 - 1.0) + 1.0;
-    return roughness4 / (M_PI * b * b);
-}
-
 float Beckmann_NDF(float roughness4, vec3 H)
 {
     float dx = H.x / H.z;
@@ -43,12 +37,15 @@ float Schlick_Shadowing_Masking(float NdotV, float NdotL)
     return shadowing * masking;
 }
 
-float Smith_Shadowing_Masking(float roughness, float NdotX)
+float Smith_Shadowing_Masking(float roughness4, float NdotX)
 {
-    float a = (1.0 / roughness / roughness / tan(acos(NdotX)));
-    float G = (a < 1.6) ? 
-                (1.0 - 1.259 * a + 0.396*a*a) / (3.535*a + 2.181*a*a)
-                : 0.0;
+    float NdotX2 = NdotX * NdotX;
+    float a = NdotX * inversesqrt(roughness4 - NdotX2 * roughness4);
+    float a2 = a * a;
+    float G = (a < 1.6)
+    ? (1.0 - 1.259 * a + 0.396 * a2) / (3.535 * a + 2.181 * a2)
+    : 0.0;
+
     return 1.0 / (1.0 + G);
 }
 

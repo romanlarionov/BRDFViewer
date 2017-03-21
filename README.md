@@ -1,34 +1,17 @@
 
-BRDF and Linearly Transformed Cosines Visualizer
-================================================
+BRDF Viewer
+===========
 
-This code base is has several demos which help to visually understand several BRDF lobes as well as LTC transformations.
+This is a simple THREE.js application that plots several 3D BRDF distributions. This can be helpful for visualizing and understanding how these analytic specular functions will scatter incident light.
 
-tree structure:
-```
-demos>
-|- BRDFViewer.html - 
-|- MERL_AreaLight.html
-|- TransformationViewer.html
-```
+GUI options are available to let you vary the roughness, view theta, and fresnel.
 
-###BRDFViewer
+Links
+-----
 
-Dynamically switch between analytic and fitted lobes with the 'switchPlots' button. Use sliders to change inputs of view theta, fresnel at normal incidence, and roughness.
+There are several other implementations of a BRDF viewer online. Most are either in C++ or written with custom WebGL rendering engines. I find that this code is much easier to use and understand due to its support for THREE.js.
 
-###MERL_AreaLight
-
-Running code demo of a simple sphere primitive lit by an area light using linearly transformed cosines. This particular demo uses a modified version of the LTC LUT, which has been fitted to use MERL emperical BRDF data. The dimensionality of the LUT is 64x3 (theta, color channel). Code for generating and exporting such textures can be found here: https://github.com/romanlarionov/LTC_Fitting/tree/merl.
-
-###TransformationViewer
-
-Visualization of the polygonal light prior to and during transformation. A static clamped cosine lobe is used to visualize D_0 being `(1/pi) * max(cos(theta), 0)`. The area light projection can also be seen transforming with the polygon. 
-
-Varying the theta or roughness value will show how the polygon warps to compensate for the irradiance it should be emitting.
-
-## Running
-
-Simple python server should do:
-```
-python -m SimpleHTTPServer
-```
+* [bv](http://www.graphics.stanford.edu/~smr/brdf/bv/)
+* [Disney's BRDF Explorer](https://www.disneyanimation.com/technology/brdf.html)
+* [WebGL BRDF Explorer](https://depot.floored.com/brdf_explorer)
+* [BRDFLab](http://brdflab.sourceforge.net/)

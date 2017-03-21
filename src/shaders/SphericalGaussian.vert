@@ -21,19 +21,39 @@ uniform vec3 shading_light;
 varying vec3 P;
 varying vec3 L;
 
-float GGX_NDF(float roughness4, float NdotH)
-{
-    float b = NdotH * NdotH * (roughness4 - 1.0) + 1.0;
-    return roughness4 / (M_PI * b * b);
+struct SphericalGaussian {
+  float amplitude;
+  float sharpness;
+  vec3 mean;
+};
+
+float evaluate(const in SphericalGaussian a, const in vec3 direction) {
+    return a.amplitude * exp(dot(a.mean, direction) * a.sharpness - a.sharpness);
 }
 
-// http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-float Smith_Shadowing_Masking(float NdotV, float NdotL)
+SphericalGaussian createSg(const in vec3 normal, const in float roughness4) {
+    SphericalGaussian res;
+    res.mean = normal;
+    res.sharpness = 2.0 / roughness4;
+
+    float b = 2.0 * M_PI / res.sharpness;
+    res.amplitude = 1.0 / (exp(-2.0 * res.sharpness) * -b + b);
+    return res;
+}
+
+SphericalGaussian map(const in SphericalGaussian hv_sg, const in vec3 reflection, const in float NdotV) {
+    SphericalGaussian res;
+    res.amplitude = hv_sg.amplitude;
+    res.sharpness = hv_sg.sharpness * 0.25 / NdotV;
+    res.mean = reflection;
+    return res;
+}
+
+float Smith_Shadowing_Masking(float roughness4, float NdotX)
 {
-    float k = ((roughness + 1.0) * (roughness + 1.0)) / 8.0;
-    float shadowing = NdotV / (NdotV * (1.0 - k) + k);
-    float masking = NdotL / (NdotL * (1.0 - k) + k);
-    return shadowing * masking;
+    float NdotX2 = NdotX * NdotX;
+    float G = 0.5 * (-1.0 + sqrt(1.0 + roughness4 * (1.0 - NdotX2) / NdotX));
+    return 1.0 / (1.0 + G);
 }
 
 float SchlickFresnel(float VdotH, float F0)
@@ -56,22 +76,23 @@ void main()
     mat3 rotation = mat3(v0, v1, v2);
 
     vec3 w_position = vec3(modelMatrix * vec4(position, 0.0));
-    vec3 view       = normalize(vec3(sin(theta), 0.0, cos(theta)));
+    vec3 view       = vec3(sin(theta), 0.0, cos(theta));
     vec3 light_dir  = normalize(w_position);
     vec3 halfway    = normalize(light_dir + view);
+    vec3 reflection = normalize(reflect(-view, vec3(0.0, 0.0, 1.0)));
 
     float NdotL = max(light_dir.z, 0.0);
     float NdotV = max(view.z, 0.0);
-    float NdotH = max(halfway.z, 0.0);
     float VdotH = max(dot(view, halfway), 0.0);
-
     float roughness4 = roughness * roughness * roughness * roughness;
 
-    float brdf = 1.0;
+    SphericalGaussian hv_sg = createSg(vec3(0.0, 0.0, 1.0), roughness4);
+    SphericalGaussian l_sg  = map(hv_sg, reflection, NdotV);
+    float brdf = evaluate(l_sg, light_dir);
 
     brdf /= 4.0 * NdotL * NdotV;
-    brdf *= GGX_NDF(roughness4, NdotH);
-    brdf *= Smith_Shadowing_Masking(NdotV, NdotL);
+    brdf *= Smith_Shadowing_Masking(roughness, NdotL);
+    brdf *= Smith_Shadowing_Masking(roughness, NdotV);
     brdf *= SchlickFresnel(VdotH, F0);
 
     brdf = (plotLog > 0.5) ? moveToLogSpace(brdf) : brdf;
