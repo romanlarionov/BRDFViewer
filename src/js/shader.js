@@ -20,7 +20,7 @@ Shader.prototype = {
 
         $.ajax({
             async: false, // todo: this is deprecated. see to that
-            url: '../src/shaders/' + file,
+            url: '/src/shaders/' + file,
             complete: function(result) {
                 loadedFile = result.responseText;
             } 
